@@ -16,6 +16,8 @@
 
 package com.android.car.radio;
 
+import android.annotation.Nullable;
+import android.hardware.radio.ProgramSelector;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -27,12 +29,13 @@ import com.android.car.radio.service.RadioStation;
 import java.util.List;
 
 import androidx.car.widget.PagedListView;
+import java.util.Objects;
 
 /**
  * Adapter that will display a list of radio stations that represent the user's presets.
  */
 public class PresetsAdapter extends RecyclerView.Adapter<PresetsViewHolder>
-        implements PresetsViewHolder.OnPresetClickListener, PagedListView.ItemCap {
+        implements PagedListView.ItemCap {
     private static final String TAG = "Em.PresetsAdapter";
 
     // Only one type of view in this adapter.
@@ -42,6 +45,7 @@ public class PresetsAdapter extends RecyclerView.Adapter<PresetsViewHolder>
 
     private List<RadioStation> mPresets;
     private OnPresetItemClickListener mPresetClickListener;
+    private OnPresetItemFavoriteListener mPresetFavoriteListener;
 
     /**
      * Interface for a listener that will be notified when an item in the presets list has been
@@ -51,16 +55,37 @@ public class PresetsAdapter extends RecyclerView.Adapter<PresetsViewHolder>
         /**
          * Method called when an item in the preset list has been clicked.
          *
+         * @param selector The {@link ProgramSelector} corresponding to the clicked preset.
+         */
+        void onPresetItemClicked(ProgramSelector selector);
+    }
+
+    /**
+     * Interface for a listener that will be notified when a favorite in the presets list has been
+     * toggled.
+     */
+    public interface OnPresetItemFavoriteListener {
+
+        /**
+         * Method called when an item's favorite status has been toggled
+         *
          * @param radioStation The {@link RadioStation} corresponding to the clicked preset.
          */
-        void onPresetItemClicked(RadioStation radioStation);
+        void onPresetItemFavoriteChanged(RadioStation radioStation, boolean saveAsFavorite);
     }
 
     /**
      * Set a listener to be notified whenever a preset card is pressed.
      */
-    public void setOnPresetItemClickListener(OnPresetItemClickListener listener) {
-        mPresetClickListener = listener;
+    public void setOnPresetItemClickListener(@Nullable OnPresetItemClickListener listener) {
+        mPresetClickListener = Objects.requireNonNull(listener);
+    }
+
+    /**
+     * Set a listener to be notified whenever a preset favorite is changed.
+     */
+    public void setOnPresetItemFavoriteListener(@Nullable OnPresetItemFavoriteListener listener) {
+        mPresetFavoriteListener = listener;
     }
 
     /**
@@ -86,7 +111,8 @@ public class PresetsAdapter extends RecyclerView.Adapter<PresetsViewHolder>
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.radio_preset_stream_card, parent, false);
 
-        return new PresetsViewHolder(view, this /* listener */);
+        return new PresetsViewHolder(
+                view, this::handlePresetClicked, this::handlePresetFavoriteChanged);
     }
 
     @Override
@@ -95,18 +121,6 @@ public class PresetsAdapter extends RecyclerView.Adapter<PresetsViewHolder>
         boolean isActiveStation = station.equals(mActiveRadioStation);
 
         holder.bindPreset(station, isActiveStation, getItemCount());
-    }
-
-    @Override
-    public void onPresetClicked(int position) {
-        if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, String.format("onPresetClicked(); item count: %d; position: %d",
-                    getItemCount(), position));
-        }
-
-        if (mPresetClickListener != null && getItemCount() > position) {
-            mPresetClickListener.onPresetItemClicked(mPresets.get(position));
-        }
     }
 
     @Override
@@ -123,5 +137,23 @@ public class PresetsAdapter extends RecyclerView.Adapter<PresetsViewHolder>
     public void setMaxItems(int max) {
         // No-op. A PagedListView needs the ItemCap interface to be implemented. However, the
         // list of presets should not be limited.
+    }
+
+    private void handlePresetClicked(int position) {
+        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+            Log.v(TAG, String.format("onPresetClicked(); item count: %d; position: %d",
+                    getItemCount(), position));
+        }
+
+        if (mPresetClickListener != null && getItemCount() > position) {
+            mPresetClickListener.onPresetItemClicked(mPresets.get(position).getSelector());
+        }
+    }
+
+    private void handlePresetFavoriteChanged (int position, boolean saveAsFavorite) {
+        if (mPresetFavoriteListener != null && getItemCount() > position) {
+            mPresetFavoriteListener.onPresetItemFavoriteChanged(
+                    mPresets.get(position), saveAsFavorite);
+        }
     }
 }

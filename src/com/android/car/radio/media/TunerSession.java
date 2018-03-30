@@ -19,6 +19,7 @@ package com.android.car.radio.media;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
+import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.os.Bundle;
 import android.os.RemoteException;
@@ -30,7 +31,6 @@ import android.util.Log;
 
 import com.android.car.radio.platform.ProgramInfoExt;
 import com.android.car.radio.service.IRadioManager;
-import com.android.car.radio.service.RadioStation;
 import com.android.car.radio.utils.ThrowingRunnable;
 
 import java.util.Objects;
@@ -38,13 +38,16 @@ import java.util.Objects;
 public class TunerSession extends MediaSessionCompat {
     private static final String TAG = "BcRadioApp.msess";
 
+    private final BrowseTree mBrowseTree;
     private final IRadioManager mUiSession;
     private final PlaybackStateCompat.Builder mPlaybackStateBuilder =
             new PlaybackStateCompat.Builder();
 
-    public TunerSession(@NonNull Context context, @NonNull IRadioManager uiSession) {
+    public TunerSession(@NonNull Context context, @NonNull BrowseTree browseTree,
+            @NonNull IRadioManager uiSession) {
         super(context, TAG);
 
+        mBrowseTree = Objects.requireNonNull(browseTree);
         mUiSession = Objects.requireNonNull(uiSession);
 
         // TODO(b/75970985): implement ACTION_STOP, ACTION_PAUSE, ACTION_PLAY
@@ -55,7 +58,6 @@ public class TunerSession extends MediaSessionCompat {
 
         // TODO(b/75970985): ACTION_SET_RATING, setRatingType, onSetRating
         // TODO(b/75970985): setSessionActivity when Car/Media app supports getSessionActivity
-        // TODO(b/75970985): notifyProgramInfoChanged for the currently tuned station
 
         setCallback(new TunerSessionCallback());
 
@@ -99,21 +101,8 @@ public class TunerSession extends MediaSessionCompat {
 
         @Override
         public void onPlayFromMediaId(String mediaId, Bundle extras) {
-            if (mediaId == null || mediaId.isEmpty()) {
-                Log.w(TAG, "Can't play from empty mediaId");
-                return;
-            }
-
-            if (mediaId.startsWith(BrowseTree.NODEPREFIX_AMFMCHANNEL)) {
-                String freqStr = mediaId.substring(BrowseTree.NODEPREFIX_AMFMCHANNEL.length());
-                int freqInt;
-                try {
-                    freqInt = Integer.parseInt(freqStr);
-                } catch (NumberFormatException ex) {
-                    Log.e(TAG, "Invalid frequency", ex);
-                    return;
-                }
-                RadioStation selector = new RadioStation(freqInt);
+            ProgramSelector selector = mBrowseTree.parseMediaId(mediaId);
+            if (selector != null) {
                 exec(() -> mUiSession.tune(selector));
             } else {
                 Log.e(TAG, "Invalid media ID: " + mediaId);

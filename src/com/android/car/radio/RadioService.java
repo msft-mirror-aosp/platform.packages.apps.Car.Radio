@@ -19,6 +19,8 @@ package com.android.car.radio;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.radio.ProgramList;
+import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager;
 import android.hardware.radio.RadioMetadata;
 import android.hardware.radio.RadioTuner;
@@ -86,6 +88,7 @@ public class RadioService extends MediaBrowserServiceCompat
 
     private BrowseTree mBrowseTree;
     private TunerSession mMediaSession;
+    private ProgramList mProgramList;
 
     /**
      * Whether or not this {@link RadioService} currently has audio focus, meaning it is the
@@ -125,17 +128,22 @@ public class RadioService extends MediaBrowserServiceCompat
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build();
 
-        if (SystemProperties.getBoolean(RadioDemo.DEMO_MODE_PROPERTY, false)) {
+        // TODO(b/73950974): remove demo mode
+        boolean isDemo = SystemProperties.getBoolean(RadioDemo.DEMO_MODE_PROPERTY, false);
+        if (isDemo) {
             initializeDemo();
         } else {
             initialze();
         }
 
         mBrowseTree = new BrowseTree(this);
-        mMediaSession = new TunerSession(this, mBinder);
+        mMediaSession = new TunerSession(this, mBrowseTree, mBinder);
         setSessionToken(mMediaSession.getSessionToken());
 
-        mBrowseTree.setAmFmRegionConfig(mRadioManager.getAmFmRegionConfig());
+        if (!isDemo) {
+            mBrowseTree.setAmFmRegionConfig(mRadioManager.getAmFmRegionConfig());
+            openRadioBandInternal(mCurrentRadioBand);
+        }
     }
 
     /**
@@ -188,6 +196,8 @@ public class RadioService extends MediaBrowserServiceCompat
         mCurrentRadioBand = radioBand;
         if (mRadioTuner == null) {
             mRadioTuner = mRadioManager.openSession(mInternalRadioTunerCallback, null);
+            mProgramList = mRadioTuner.getDynamicProgramList(null);
+            mBrowseTree.setProgramList(mProgramList);
         }
 
         if (Log.isLoggable(TAG, Log.DEBUG)) {
@@ -303,6 +313,10 @@ public class RadioService extends MediaBrowserServiceCompat
 
         abandonAudioFocus();
 
+        if (mProgramList != null) {
+            mProgramList.close();
+            mProgramList = null;
+        }
         if (mRadioTuner != null) {
             mRadioTuner.close();
             mRadioTuner = null;
@@ -344,24 +358,13 @@ public class RadioService extends MediaBrowserServiceCompat
          * as a {@link android.hardware.radio.RadioTuner.Callback}.
          */
         @Override
-        public void tune(RadioStation radioStation) {
-            if (mRadioManager == null || radioStation == null
+        public void tune(ProgramSelector sel) {
+            if (mRadioManager == null || sel == null
                     || requestAudioFocus() != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
                 return;
             }
 
-            if (mRadioTuner == null || radioStation.getRadioBand() != mCurrentRadioBand) {
-                int radioStatus = openRadioBandInternal(radioStation.getRadioBand());
-                if (radioStatus == RadioManager.STATUS_ERROR) {
-                    return;
-                }
-            }
-
-            int status = mRadioTuner.tune(radioStation.getChannelNumber(), 0 /* subChannel */);
-
-            if (Log.isLoggable(TAG, Log.DEBUG)) {
-                Log.d(TAG, "Tuning to station: " + radioStation + "\n\tstatus: " + status);
-            }
+            mRadioTuner.tune(sel);
         }
 
         /**
@@ -632,10 +635,7 @@ public class RadioService extends MediaBrowserServiceCompat
             // re-opening of the radio tuner.
             if (status == RadioTuner.ERROR_HARDWARE_FAILURE
                     || status == RadioTuner.ERROR_SERVER_DIED) {
-                if (mRadioTuner != null) {
-                    mRadioTuner.close();
-                    mRadioTuner = null;
-                }
+                close();
 
                 // Attempt to re-open the RadioTuner. Each time the radio tuner fails to open, the
                 // mReOpenRadioTunerCount will be incremented.
@@ -702,7 +702,8 @@ public class RadioService extends MediaBrowserServiceCompat
 
     @Override
     public BrowserRoot onGetRoot(String clientPackageName, int clientUid, Bundle rootHints) {
-        return mBrowseTree.getRoot(clientPackageName, clientUid, rootHints);
+        // TODO(b/75970985): check permissions, if necessary
+        return mBrowseTree.getRoot();
     }
 
     @Override
