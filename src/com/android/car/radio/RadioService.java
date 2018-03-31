@@ -37,16 +37,18 @@ import android.util.Log;
 import android.support.v4.media.MediaBrowserCompat.MediaItem;
 import android.support.v4.media.MediaBrowserServiceCompat;
 
-import com.android.car.radio.demo.RadioDemo;
+import com.android.car.radio.media.Program;
 import com.android.car.radio.media.BrowseTree;
 import com.android.car.radio.media.TunerSession;
 import com.android.car.radio.service.IRadioCallback;
 import com.android.car.radio.service.IRadioManager;
 import com.android.car.radio.service.RadioRds;
 import com.android.car.radio.service.RadioStation;
+import com.android.car.radio.platform.ProgramSelectorExt;
 import com.android.car.radio.platform.RadioManagerExt;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -128,35 +130,19 @@ public class RadioService extends MediaBrowserServiceCompat
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build();
 
-        // TODO(b/73950974): remove demo mode
-        boolean isDemo = SystemProperties.getBoolean(RadioDemo.DEMO_MODE_PROPERTY, false);
-        if (isDemo) {
-            initializeDemo();
-        } else {
-            initialze();
-        }
+        initialze();
 
         mBrowseTree = new BrowseTree(this);
         mMediaSession = new TunerSession(this, mBrowseTree, mBinder);
         setSessionToken(mMediaSession.getSessionToken());
 
-        if (!isDemo) {
-            mBrowseTree.setAmFmRegionConfig(mRadioManager.getAmFmRegionConfig());
-            openRadioBandInternal(mCurrentRadioBand);
-        }
-    }
+        // TODO(b/75970985): implement actual favorites
+        HashSet<Program> favDemo = new HashSet<>();
+        favDemo.add(new Program(ProgramSelectorExt.createAmFmSelector(97300), "Alice"));
+        mBrowseTree.setFavorites(favDemo);
 
-    /**
-     * Initializes this service to use a demo {@link IRadioManager}.
-     *
-     * @see RadioDemo
-     */
-    private void initializeDemo() {
-        if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, "initializeDemo()");
-        }
-
-        mBinder = RadioDemo.getInstance(this /* context */).createDemoManager();
+        mBrowseTree.setAmFmRegionConfig(mRadioManager.getAmFmRegionConfig());
+        openRadioBandInternal(mCurrentRadioBand);
     }
 
     /**
