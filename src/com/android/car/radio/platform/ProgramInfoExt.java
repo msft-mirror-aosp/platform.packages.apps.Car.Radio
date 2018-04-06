@@ -17,6 +17,8 @@
 package com.android.car.radio.platform;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.graphics.Bitmap;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioMetadata;
 import android.media.MediaMetadata;
@@ -57,8 +59,17 @@ public class ProgramInfoExt {
         return "";
     }
 
+    public static @NonNull RadioMetadata getMetadata(@NonNull ProgramInfo info) {
+        RadioMetadata meta = info.getMetadata();
+        if (meta != null) return meta;
+
+        /* Creating new Metadata object on each get won't be necessary after we
+         * push this code to the framework. */
+        return (new RadioMetadata.Builder()).build();
+    }
+
     public static @NonNull MediaMetadata toMediaMetadata(@NonNull ProgramInfo info,
-            boolean isFavorite) {
+            boolean isFavorite, @Nullable ImageResolver imageResolver) {
         MediaMetadata.Builder bld = new MediaMetadata.Builder();
 
         bld.putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, getProgramName(info));
@@ -84,7 +95,12 @@ public class ProgramInfoExt {
                 else subtitle = title + TITLE_SEPARATOR + artist;
                 bld.putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, subtitle);
             }
-            // TODO(b/75970985): Set METADATA_KEY_ART as well.
+            long albumArtId = RadioMetadataExt.getGlobalBitmapId(meta,
+                    RadioMetadata.METADATA_KEY_ART);
+            if (albumArtId != 0 && imageResolver != null) {
+                Bitmap bm = imageResolver.resolve(albumArtId);
+                if (bm != null) bld.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, bm);
+            }
         }
 
         bld.putRating(MediaMetadata.METADATA_KEY_USER_RATING, Rating.newHeartRating(isFavorite));

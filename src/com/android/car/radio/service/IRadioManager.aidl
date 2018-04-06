@@ -15,9 +15,11 @@
  */
 package com.android.car.radio.service;
 
-import com.android.car.radio.service.IRadioCallback;
-import com.android.car.radio.service.RadioStation;
 import android.hardware.radio.ProgramSelector;
+import android.hardware.radio.RadioManager;
+
+import com.android.car.radio.media.Program;
+import com.android.car.radio.service.IRadioCallback;
 
 /**
  * Interface for apps to communicate with the radio.
@@ -58,6 +60,20 @@ interface IRadioManager {
     boolean isMuted();
 
     /**
+     * Adds new program to favorites list.
+     *
+     * @param favorite A program to add to favorites list.
+     */
+    void addFavorite(in Program favorite);
+
+    /**
+     * Removes a program from favorites list.
+     *
+     * @param sel ProgramSelector of a favorite to remove.
+     */
+    void removeFavorite(in ProgramSelector sel);
+
+    /**
      * Opens the radio for the given band.
      *
      * @param radioBand One of {@link RadioManager#BAND_FM}, {@link RadioManager#BAND_AM},
@@ -77,11 +93,8 @@ interface IRadioManager {
      */
     void removeRadioTunerCallback(in IRadioCallback callback);
 
-    /**
-     * Returns a {@link RadioStation} that encapsulates the information about the current
-     * station the radio is tuned to.
-     */
-    RadioStation getCurrentRadioStation();
+    // TODO(b/73950974): use callback only (and make sure it's always called for new listeners)
+    RadioManager.ProgramInfo getCurrentProgramInfo();
 
     /**
      * Returns {@code true} if the radio was able to successfully initialize. A value of

@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.v4.media.MediaMetadataCompat;
@@ -29,7 +30,9 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
+import com.android.car.radio.platform.ImageResolver;
 import com.android.car.radio.platform.ProgramInfoExt;
+import com.android.car.radio.platform.ProgramSelectorExt;
 import com.android.car.radio.service.IRadioManager;
 import com.android.car.radio.utils.ThrowingRunnable;
 
@@ -38,27 +41,31 @@ import java.util.Objects;
 public class TunerSession extends MediaSessionCompat {
     private static final String TAG = "BcRadioApp.msess";
 
+    private final Object mLock = new Object();
+
     private final BrowseTree mBrowseTree;
+    @Nullable private final ImageResolver mImageResolver;
     private final IRadioManager mUiSession;
     private final PlaybackStateCompat.Builder mPlaybackStateBuilder =
             new PlaybackStateCompat.Builder();
+    @Nullable private ProgramInfo mCurrentProgram;
 
     public TunerSession(@NonNull Context context, @NonNull BrowseTree browseTree,
-            @NonNull IRadioManager uiSession) {
+            @NonNull IRadioManager uiSession, @Nullable ImageResolver imageResolver) {
         super(context, TAG);
 
         mBrowseTree = Objects.requireNonNull(browseTree);
+        mImageResolver = imageResolver;
         mUiSession = Objects.requireNonNull(uiSession);
 
         // TODO(b/75970985): implement ACTION_STOP, ACTION_PAUSE, ACTION_PLAY
         mPlaybackStateBuilder.setActions(
                 PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
                 PlaybackStateCompat.ACTION_SKIP_TO_NEXT |
-                PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID);
-
-        // TODO(b/75970985): ACTION_SET_RATING, setRatingType, onSetRating
-        // TODO(b/75970985): setSessionActivity when Car/Media app supports getSessionActivity
-
+                PlaybackStateCompat.ACTION_SET_RATING |
+                PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
+                PlaybackStateCompat.ACTION_PLAY_FROM_URI);
+        setRatingType(RatingCompat.RATING_HEART);
         setCallback(new TunerSessionCallback());
 
         // TODO(b/75970985): track playback state, don't hardcode it
@@ -75,10 +82,24 @@ public class TunerSession extends MediaSessionCompat {
         }
     }
 
+    private void updateMetadata() {
+        synchronized (mLock) {
+            if (mCurrentProgram == null) return;
+            boolean fav = mBrowseTree.isFavorite(mCurrentProgram.getSelector());
+            setMetadata(MediaMetadataCompat.fromMediaMetadata(
+                    ProgramInfoExt.toMediaMetadata(mCurrentProgram, fav, mImageResolver)));
+        }
+    }
+
     public void notifyProgramInfoChanged(@NonNull ProgramInfo info) {
-        boolean fav = mBrowseTree.isFavorite(info.getSelector());
-        setMetadata(MediaMetadataCompat.fromMediaMetadata(
-                ProgramInfoExt.toMediaMetadata(info, fav)));
+        synchronized (mLock) {
+            mCurrentProgram = info;
+            updateMetadata();
+        }
+    }
+
+    public void notifyFavoritesChanged() {
+        updateMetadata();
     }
 
     private void exec(ThrowingRunnable<RemoteException> func) {
@@ -101,12 +122,36 @@ public class TunerSession extends MediaSessionCompat {
         }
 
         @Override
+        public void onSetRating(RatingCompat rating) {
+            synchronized (mLock) {
+                if (mCurrentProgram == null) return;
+                if (rating.hasHeart()) {
+                    Program fav = Program.fromProgramInfo(mCurrentProgram);
+                    exec(() -> mUiSession.addFavorite(fav));
+                } else {
+                    ProgramSelector fav = mCurrentProgram.getSelector();
+                    exec(() -> mUiSession.removeFavorite(fav));
+                }
+            }
+        }
+
+        @Override
         public void onPlayFromMediaId(String mediaId, Bundle extras) {
             ProgramSelector selector = mBrowseTree.parseMediaId(mediaId);
             if (selector != null) {
                 exec(() -> mUiSession.tune(selector));
             } else {
                 Log.e(TAG, "Invalid media ID: " + mediaId);
+            }
+        }
+
+        @Override
+        public void onPlayFromUri(Uri uri, Bundle extras) {
+            ProgramSelector selector = ProgramSelectorExt.fromUri(uri);
+            if (selector != null) {
+                exec(() -> mUiSession.tune(selector));
+            } else {
+                Log.e(TAG, "Invalid URI: " + uri);
             }
         }
     }
