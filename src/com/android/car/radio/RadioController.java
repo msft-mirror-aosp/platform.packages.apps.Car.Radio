@@ -31,14 +31,13 @@ import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioMetadata;
 import android.hardware.radio.RadioTuner;
 import android.media.AudioManager;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.support.annotation.ColorInt;
-import android.support.annotation.Nullable;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.Nullable;
 
 import com.android.car.radio.media.Program;
 import com.android.car.radio.platform.ProgramInfoExt;
@@ -46,8 +45,6 @@ import com.android.car.radio.platform.ProgramSelectorExt;
 import com.android.car.radio.service.IRadioCallback;
 import com.android.car.radio.service.IRadioManager;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -93,7 +90,8 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
     private View mRadioErrorDisplay;
 
     private final RadioChannelColorMapper mColorMapper;
-    @ColorInt private int mCurrentBackgroundColor = INVALID_BACKGROUND_COLOR;
+    @ColorInt
+    private int mCurrentBackgroundColor = INVALID_BACKGROUND_COLOR;
 
     private final RadioDisplayController mRadioDisplayController;
 
@@ -220,7 +218,8 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
             mRadioDisplayController.setPlayPauseButtonState(mRadioManager.isMuted());
 
             // TODO(b/73950974): use callback only
-            mCallback.onCurrentProgramInfoChanged(mRadioManager.getCurrentProgramInfo());
+            ProgramInfo current = mRadioManager.getCurrentProgramInfo();
+            if (current != null) mCallback.onCurrentProgramInfoChanged(current);
         } catch (RemoteException e) {
             Log.e(TAG, "updateRadioDisplay(); remote exception: " + e.getMessage());
         }

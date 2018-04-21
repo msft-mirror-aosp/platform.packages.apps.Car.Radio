@@ -20,12 +20,10 @@ import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.annotation.NonNull;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Point;
-import android.support.annotation.NonNull;
-import android.support.v4.view.animation.FastOutSlowInInterpolator;
-import android.support.v7.widget.CardView;
 import android.view.Display;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +31,8 @@ import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 
 import androidx.car.utils.ColumnCalculator;
+import androidx.cardview.widget.CardView;
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 
 /**
  * A animation manager that is responsible for the start and exiting animation for the
