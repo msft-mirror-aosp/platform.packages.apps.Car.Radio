@@ -16,7 +16,6 @@
 
 package com.android.car.radio;
 
-import android.animation.ArgbEvaluator;
 import android.animation.ValueAnimator;
 import android.annotation.ColorInt;
 import android.annotation.NonNull;
@@ -40,7 +39,8 @@ import android.view.View;
 import com.android.car.broadcastradio.support.Program;
 import com.android.car.broadcastradio.support.platform.ProgramInfoExt;
 import com.android.car.broadcastradio.support.platform.ProgramSelectorExt;
-import com.android.car.radio.service.IRadioCallback;
+import com.android.car.radio.service.CurrentProgramListenerAdapter;
+import com.android.car.radio.service.ICurrentProgramListener;
 import com.android.car.radio.service.IRadioManager;
 import com.android.car.radio.storage.RadioStorage;
 import com.android.car.radio.utils.ProgramSelectorUtils;
@@ -80,21 +80,8 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
 
     private View mRadioBackground;
     private boolean mShouldColorStatusBar;
-    private boolean mShouldColorBackground;
 
-    /**
-     * An additional layer on top of the background that should match the color of
-     * {@link #mRadioBackground}. This view should only exist in the preset list. The reason this
-     * layer cannot be transparent is because it needs to be elevated, and elevation does not
-     * work if the background is undefined or transparent.
-     */
-    private View mRadioPresetBackground;
-
-    private View mRadioErrorDisplay;
-
-    private final RadioChannelColorMapper mColorMapper;
-    @ColorInt
-    private int mCurrentBackgroundColor = INVALID_BACKGROUND_COLOR;
+    @ColorInt private int mCurrentBackgroundColor = INVALID_BACKGROUND_COLOR;
 
     private final RadioDisplayController mRadioDisplayController;
 
@@ -107,8 +94,13 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
     private final List<RadioServiceConnectionListener> mRadioServiceConnectionListeners =
             new ArrayList<>();
 
+    private final ICurrentProgramListener mCurrentProgramListener =
+            new CurrentProgramListenerAdapter(this::onCurrentProgramChanged);
+
     /**
      * Interface for a class that will be notified when the current radio station has been changed.
+     *
+     * TODO(b/73950974): replace with ICurrentProgramListener
      */
     public interface ProgramInfoChangeListener {
         /**
@@ -134,14 +126,12 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
         mActivity = activity;
 
         mRadioDisplayController = new RadioDisplayController(mActivity);
-        mColorMapper = RadioChannelColorMapper.getInstance(mActivity);
 
         mAmBandString = mActivity.getString(R.string.radio_am_text);
         mFmBandString = mActivity.getString(R.string.radio_fm_text);
 
         mRadioStorage = RadioStorage.getInstance(mActivity);
         mRadioStorage.addPresetsChangeListener(this);
-        mShouldColorBackground = true;
     }
 
     /**
@@ -158,11 +148,6 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
         mRadioDisplayController.setAddPresetButtonListener(mPresetButtonClickListener);
 
         mRadioBackground = container;
-        mRadioPresetBackground = container.findViewById(R.id.preset_current_card_container);
-
-        mRadioErrorDisplay = container.findViewById(R.id.radio_error_display);
-
-        updateRadioDisplay();
     }
 
     /**
@@ -180,14 +165,6 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
      */
     public void setShouldColorStatusBar(boolean shouldColorStatusBar) {
        mShouldColorStatusBar = shouldColorStatusBar;
-    }
-
-    /**
-     * Set whether this controller should update the background color.
-     * This behavior is enabled by defaullt
-     */
-    public void setShouldColorBackground(boolean shouldColorBackground) {
-        mShouldColorBackground = shouldColorBackground;
     }
 
     /**
@@ -231,28 +208,6 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
                 mActivity, RadioService.class);
         if (!mActivity.bindService(bindIntent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
             Log.e(TAG, "Failed to connect to RadioService.");
-        }
-
-        updateRadioDisplay();
-    }
-
-    /**
-     * Retrieves information about the current radio station from {@link #mRadioManager} and updates
-     * the display of that information accordingly.
-     */
-    private void updateRadioDisplay() {
-        if (mRadioManager == null) {
-            return;
-        }
-
-        try {
-            mRadioDisplayController.setSingleChannelDisplay(mRadioBackground);
-
-            // TODO(b/73950974): use callback only
-            ProgramInfo current = mRadioManager.getCurrentProgramInfo();
-            if (current != null) mCallback.onCurrentProgramInfoChanged(current);
-        } catch (RemoteException e) {
-            Log.e(TAG, "updateRadioDisplay(); remote exception: " + e.getMessage());
         }
     }
 
@@ -361,49 +316,10 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
                     ProgramSelectorExt.getDisplayName(sel, ProgramSelectorExt.NAME_NO_MODULATION));
         }
         mCurrentlyDisplayedChannel = freq;
-
-        maybeUpdateBackgroundColor(freq);
-    }
-
-    /**
-     * Checks if the color of the radio background should be changed, and if so, animates that
-     * color change.
-     */
-    private void maybeUpdateBackgroundColor(int channel) {
-        if (mRadioBackground == null || !mShouldColorBackground) {
-            return;
-        }
-
-        int newColor = mColorMapper.getColorForChannel(channel);
-
-        // No animation required if the colors are the same.
-        if (newColor == mCurrentBackgroundColor) {
-            return;
-        }
-
-        // If the current background color is invalid, then just set as the new color without any
-        // animation.
-        if (mCurrentBackgroundColor == INVALID_BACKGROUND_COLOR) {
-            mCurrentBackgroundColor = newColor;
-            setBackgroundColor(newColor);
-        }
-
-        // Otherwise, animate the background color change.
-        ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(),
-                mCurrentBackgroundColor, newColor);
-        colorAnimation.setDuration(BACKGROUND_CHANGE_ANIM_TIME_MS);
-        colorAnimation.addUpdateListener(mBackgroundColorUpdater);
-        colorAnimation.start();
-
-        mCurrentBackgroundColor = newColor;
     }
 
     private void setBackgroundColor(int backgroundColor) {
         mRadioBackground.setBackgroundColor(backgroundColor);
-
-        if (mRadioPresetBackground != null) {
-            mRadioPresetBackground.setBackgroundColor(backgroundColor);
-        }
 
         if (mShouldColorStatusBar) {
             int red = darkenColor(Color.red(backgroundColor));
@@ -444,7 +360,7 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
 
         if (mRadioManager != null) {
             try {
-                mRadioManager.removeRadioTunerCallback(mCallback);
+                mRadioManager.removeCurrentProgramListener(mCurrentProgramListener);
             } catch (RemoteException e) {
                 Log.e(TAG, "tuneToRadioChannel(); remote exception: " + e.getMessage());
             }
@@ -473,29 +389,25 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
         return null;
     }
 
-    private final IRadioCallback.Stub mCallback = new IRadioCallback.Stub() {
-        @Override
-        public void onCurrentProgramInfoChanged(ProgramInfo info) {
-            mCurrentProgram = Objects.requireNonNull(info);
-            ProgramSelector sel = info.getSelector();
+    private void onCurrentProgramChanged(@NonNull ProgramInfo info) {
+        mCurrentProgram = Objects.requireNonNull(info);
+        ProgramSelector sel = info.getSelector();
 
-            updateRadioChannelDisplay(sel);
+        updateRadioChannelDisplay(sel);
 
-            mRadioDisplayController.setCurrentStation(
-                    ProgramInfoExt.getProgramName(info, ProgramInfoExt.NAME_NO_CHANNEL_FALLBACK));
-            RadioMetadata meta = ProgramInfoExt.getMetadata(mCurrentProgram);
-            mRadioDisplayController.setCurrentSongTitleAndArtist(
-                    meta.getString(RadioMetadata.METADATA_KEY_TITLE),
-                    meta.getString(RadioMetadata.METADATA_KEY_ARTIST));
+        mRadioDisplayController.setCurrentStation(
+                ProgramInfoExt.getProgramName(info, ProgramInfoExt.NAME_NO_CHANNEL_FALLBACK));
+        RadioMetadata meta = ProgramInfoExt.getMetadata(mCurrentProgram);
+        mRadioDisplayController.setCurrentSongTitleAndArtist(
+                meta.getString(RadioMetadata.METADATA_KEY_TITLE),
+                meta.getString(RadioMetadata.METADATA_KEY_ARTIST));
+        mRadioDisplayController.setChannelIsPreset(mRadioStorage.isPreset(sel));
 
-            mRadioDisplayController.setChannelIsPreset(mRadioStorage.isPreset(sel));
-
-            // Notify that the current radio station has changed.
-            for (ProgramInfoChangeListener listener : mProgramInfoChangeListeners) {
-                listener.onProgramInfoChanged(info);
-            }
+        // Notify that the current radio station has changed.
+        for (ProgramInfoChangeListener listener : mProgramInfoChangeListeners) {
+            listener.onProgramInfoChanged(info);
         }
-    };
+    }
 
     private final View.OnClickListener mBackwardSeekClickListener = new View.OnClickListener() {
         @Override
@@ -587,24 +499,12 @@ public class RadioController implements RadioStorage.PresetsChangeListener {
             try {
                 if (mRadioManager == null || !mRadioManager.isInitialized()) {
                     mRadioDisplayController.setEnabled(false);
-
-                    if (mRadioErrorDisplay != null) {
-                        mRadioErrorDisplay.setVisibility(View.VISIBLE);
-                    }
-
-                    return;
                 }
 
                 mRadioDisplayController.setEnabled(true);
                 mRadioManager.addPlaybackStateListener(mRadioDisplayController);
 
-                if (mRadioErrorDisplay != null) {
-                    mRadioErrorDisplay.setVisibility(View.GONE);
-                }
-
-                mRadioDisplayController.setSingleChannelDisplay(mRadioBackground);
-
-                mRadioManager.addRadioTunerCallback(mCallback);
+                mRadioManager.addCurrentProgramListener(mCurrentProgramListener);
 
                 // Notify listeners
                 for (RadioServiceConnectionListener listener : mRadioServiceConnectionListeners) {
