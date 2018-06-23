@@ -16,6 +16,7 @@
 
 package com.android.car.radio;
 
+import android.annotation.NonNull;
 import android.content.Intent;
 import android.hardware.radio.RadioManager;
 import android.hardware.radio.RadioManager.ProgramInfo;
@@ -30,17 +31,17 @@ import android.widget.TextView;
 import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager.widget.ViewPager;
 
+import com.android.car.radio.service.CurrentProgramListenerAdapter;
+import com.android.car.radio.service.ICurrentProgramListener;
 import com.android.car.radio.utils.ProgramSelectorUtils;
 
 import com.google.android.material.tabs.TabLayout;
 
 /**
- * The main activity for the radio. This activity initializes the radio controls and listener for
- * radio changes.
+ * The main activity for the radio app.
  */
-public class CarRadioActivity extends FragmentActivity implements
-        RadioController.ProgramInfoChangeListener {
-    private static final String TAG = "Em.RadioActivity";
+public class RadioActivity extends FragmentActivity {
+    private static final String TAG = "BcRadioApp.RadioActivity";
 
     /**
      * Intent action for notifying that the radio state has changed.
@@ -58,16 +59,20 @@ public class CarRadioActivity extends FragmentActivity implements
     private View mRootView;
     private ImageButton mBandToggleButton;
 
+    private final ICurrentProgramListener mCurrentProgramListener =
+            new CurrentProgramListenerAdapter(this::onCurrentProgramChanged);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         mRadioController = new RadioController(this);
-        mRadioController.addProgramInfoChangeListener(this);
+        mRadioController.addRadioServiceConnectionListener(() ->
+                mRadioController.addCurrentProgramListener(mCurrentProgramListener));
         setContentView(R.layout.radio_activity);
         mRootView = findViewById(R.id.main_radio_display);
-        RadioFragmentPagerAdapter adapter =
-                new RadioFragmentPagerAdapter(this, getSupportFragmentManager(), mRadioController);
+        RadioPagerAdapter adapter =
+                new RadioPagerAdapter(this, getSupportFragmentManager(), mRadioController);
         ViewPager viewPager = findViewById(R.id.viewpager);
         viewPager.setAdapter(adapter);
         TabLayout tabLayout = (TabLayout) findViewById(R.id.radio_tabs);
@@ -155,17 +160,14 @@ public class CarRadioActivity extends FragmentActivity implements
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        mRadioController.removeCurrentProgramListener(mCurrentProgramListener);
 
-        if (Log.isLoggable(TAG, Log.DEBUG)) {
-            Log.d(TAG, "onDestroy");
-        }
+        super.onDestroy();
 
         mRadioController.shutdown();
     }
 
-    @Override
-    public void onProgramInfoChanged(ProgramInfo info) {
+    private void onCurrentProgramChanged(@NonNull ProgramInfo info) {
         int radioBand = ProgramSelectorUtils.getRadioBand(info.getSelector());
         if (radioBand == RadioManager.BAND_FM) {
             mBandToggleButton.setImageResource(R.drawable.ic_radio_fm);
