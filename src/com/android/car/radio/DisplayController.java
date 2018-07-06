@@ -16,13 +16,15 @@
 
 package com.android.car.radio;
 
-import android.annotation.NonNull;
 import android.content.Context;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.car.radio.audio.PlaybackStateListenerAdapter;
 import com.android.car.radio.widget.PlayPauseButton;
@@ -35,8 +37,7 @@ import java.util.Objects;
 public class DisplayController {
     private final Context mContext;
 
-    private TextView mChannelBand;
-    private TextView mChannelNumber;
+    private TextView mChannel;
 
     private TextView mCurrentSongTitleAndArtist;
     private TextView mCurrentStation;
@@ -46,7 +47,22 @@ public class DisplayController {
 
     private PlayPauseButton mPlayButton;
 
-    private ImageView mAddPresetsButton;
+    private boolean mIsFavorite = false;
+    private ImageView mFavoriteButton;
+    private FavoriteToggleListener mFavoriteToggleListener;
+
+    /**
+     * Callback for favorite toggle button.
+     */
+    public interface FavoriteToggleListener {
+        /**
+         * Called when favorite toggle button was clicked.
+         *
+         * @param addFavorite {@code} true, if the callback should add the current program to
+         *        favorites, {@code false} otherwise.
+         */
+        void onFavoriteToggled(boolean addFavorite);
+    }
 
     public DisplayController(@NonNull Context context,
             @NonNull RadioController radioController) {
@@ -61,8 +77,7 @@ public class DisplayController {
      * Initializes this {@link DisplayController}.
      */
     public void initialize(View container) {
-        mChannelBand = container.findViewById(R.id.radio_station_band);
-        mChannelNumber = container.findViewById(R.id.radio_station_channel);
+        mChannel = container.findViewById(R.id.radio_station_channel);
 
         mCurrentSongTitleAndArtist = container.findViewById(R.id.radio_station_details);
         mCurrentStation = container.findViewById(R.id.radio_station_name);
@@ -71,7 +86,14 @@ public class DisplayController {
         mForwardSeekButton = container.findViewById(R.id.radio_forward_button);
 
         mPlayButton = container.findViewById(R.id.radio_play_button);
-        mAddPresetsButton = container.findViewById(R.id.radio_add_presets_button);
+
+        mFavoriteButton = container.findViewById(R.id.radio_add_presets_button);
+        if (mFavoriteButton != null) {
+            mFavoriteButton.setOnClickListener(v -> {
+                FavoriteToggleListener listener = mFavoriteToggleListener;
+                if (listener != null) listener.onFavoriteToggled(!mIsFavorite);
+            });
+        }
     }
 
     /**
@@ -102,9 +124,9 @@ public class DisplayController {
             mBackwardSeekButton.setColorFilter(tint);
         }
 
-        if (mAddPresetsButton != null) {
-            mAddPresetsButton.setEnabled(enabled);
-            mAddPresetsButton.setColorFilter(tint);
+        if (mFavoriteButton != null) {
+            mFavoriteButton.setEnabled(enabled);
+            mFavoriteButton.setColorFilter(tint);
         }
     }
 
@@ -137,33 +159,20 @@ public class DisplayController {
     }
 
     /**
-     * Sets the {@link android.view.View.OnClickListener} for the button that will add the current
-     * radio station to a list of stored presets.
+     * Sets the listener for favorite toggle button.
+     *
+     * @param listener Listener to set, or {@code null} to remove
      */
-    public void setAddPresetButtonListener(View.OnClickListener listener) {
-        if (mAddPresetsButton != null) {
-            mAddPresetsButton.setOnClickListener(listener);
-        }
+    public void setFavoriteToggleListener(@Nullable FavoriteToggleListener listener) {
+        mFavoriteToggleListener = listener;
     }
 
     /**
-     * Sets the current radio channel (e.g. 88.5).
+     * Sets the current radio channel (e.g. 88.5 FM).
      */
-    public void setChannelNumber(String channel) {
-        if (mChannelNumber != null) {
-            mChannelNumber.setText(channel);
-        }
-    }
-
-    /**
-     * Sets the radio channel band (e.g. FM).
-     */
-    public void setChannelBand(String channelBand) {
-        if (mChannelBand != null) {
-            mChannelBand.setText(channelBand);
-            mChannelBand.setVisibility(
-                    !TextUtils.isEmpty(channelBand) ? View.VISIBLE : View.GONE);
-        }
+    public void setChannel(String channel) {
+        if (mChannel == null) return;
+        mChannel.setText(channel);
     }
 
     /**
@@ -212,8 +221,9 @@ public class DisplayController {
      * icon will be updatd to reflect this state.
      */
     public void setCurrentIsFavorite(boolean isFavorite) {
-        if (mAddPresetsButton == null) return;
-        mAddPresetsButton.setImageResource(
+        mIsFavorite = isFavorite;
+        if (mFavoriteButton == null) return;
+        mFavoriteButton.setImageResource(
                 isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_empty);
     }
 }
