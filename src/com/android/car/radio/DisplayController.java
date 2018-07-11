@@ -25,8 +25,8 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
 
-import com.android.car.radio.audio.PlaybackStateListenerAdapter;
 import com.android.car.radio.widget.PlayPauseButton;
 
 import java.util.Objects;
@@ -64,13 +64,11 @@ public class DisplayController {
         void onFavoriteToggled(boolean addFavorite);
     }
 
-    public DisplayController(@NonNull Context context,
+    public DisplayController(@NonNull FragmentActivity activity,
             @NonNull RadioController radioController) {
-        mContext = Objects.requireNonNull(context);
+        mContext = Objects.requireNonNull(activity);
 
-        radioController.addRadioServiceConnectionListener(() ->
-                radioController.addPlaybackStateListener(new PlaybackStateListenerAdapter(
-                        this::onPlaybackStateChanged)));
+        radioController.getPlaybackState().observe(activity, this::onPlaybackStateChanged);
     }
 
     /**
@@ -149,13 +147,11 @@ public class DisplayController {
     }
 
     /**
-     * Sets the {@link android.view.View.OnClickListener} for the play button. Clicking on this
-     * button should toggle the radio from muted to un-muted.
+     * Sets the callback for the play/pause button.
      */
-    public void setPlayButtonListener(View.OnClickListener listener) {
-        if (mPlayButton != null) {
-            mPlayButton.setOnClickListener(listener);
-        }
+    public void setPlayButtonCallback(@Nullable PlayPauseButton.Callback callback) {
+        if (mPlayButton == null) return;
+        mPlayButton.setCallback(callback);
     }
 
     /**
