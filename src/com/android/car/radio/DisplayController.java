@@ -16,7 +16,9 @@
 
 package com.android.car.radio;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
+import android.hardware.radio.ProgramSelector;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.view.View;
@@ -27,6 +29,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
 
+import com.android.car.broadcastradio.support.platform.ProgramSelectorExt;
+import com.android.car.radio.bands.ProgramType;
+import com.android.car.radio.service.RadioAppServiceWrapper;
+import com.android.car.radio.service.RadioAppServiceWrapper.ConnectionState;
 import com.android.car.radio.util.Log;
 import com.android.car.radio.widget.PlayPauseButton;
 
@@ -38,21 +44,30 @@ import java.util.Objects;
 public class DisplayController {
     private static final String TAG = "BcRadioApp.display";
 
+    private static final int CHANNEL_CHANGE_DURATION_MS = 200;
+    private static final char EN_DASH = '\u2013';
+    private static final String DETAILS_SEPARATOR = " " + EN_DASH + " ";
+
     private final Context mContext;
 
+    private final View mTabs;
+    private final View mViewpager;
+    private final TextView mStatusMessage;
     private final TextView mChannel;
-
-    private final TextView mCurrentSongTitleAndArtist;
-    private final TextView mCurrentStation;
+    private final TextView mDetails;
+    private final TextView mStationName;
 
     private final ImageView mBackwardSeekButton;
     private final ImageView mForwardSeekButton;
-
     private final PlayPauseButton mPlayButton;
+    private final View mBandButton;
 
     private boolean mIsFavorite = false;
     private final ImageView mFavoriteButton;
     private FavoriteToggleListener mFavoriteToggleListener;
+
+    private final ValueAnimator mChannelAnimator = new ValueAnimator();
+    private @Nullable ProgramSelector mDisplayedChannel;
 
     /**
      * Callback for favorite toggle button.
@@ -71,12 +86,16 @@ public class DisplayController {
             @NonNull RadioController radioController) {
         mContext = Objects.requireNonNull(activity);
 
+        mTabs = activity.findViewById(R.id.radio_tabs);
+        mViewpager = activity.findViewById(R.id.viewpager);
+        mStatusMessage = activity.findViewById(R.id.status_message);
         mChannel = activity.findViewById(R.id.radio_station_channel);
-        mCurrentSongTitleAndArtist = activity.findViewById(R.id.radio_station_details);
-        mCurrentStation = activity.findViewById(R.id.radio_station_name);
+        mDetails = activity.findViewById(R.id.radio_station_details);
+        mStationName = activity.findViewById(R.id.radio_station_name);
         mBackwardSeekButton = activity.findViewById(R.id.radio_back_button);
         mForwardSeekButton = activity.findViewById(R.id.radio_forward_button);
         mPlayButton = activity.findViewById(R.id.radio_play_button);
+        mBandButton = activity.findViewById(R.id.band_toggle_button);
         mFavoriteButton = activity.findViewById(R.id.radio_add_presets_button);
 
         radioController.getPlaybackState().observe(activity, this::onPlaybackStateChanged);
@@ -87,22 +106,22 @@ public class DisplayController {
                 if (listener != null) listener.onFavoriteToggled(!mIsFavorite);
             });
         }
-
-        setEnabled(false);
     }
 
     /**
-     * Set whether or not the UI is active (depending on the state of service connection)
+     * Sets application state.
      *
-     * If the UI is disabled, then no callbacks will be triggered when the buttons are pressed.
-     * In addition, the look of the button wil be updated to reflect their disabled state.
+     * This shows/hides the UI elements and may display error messages (depending on the current
+     * application state).
      *
-     * @param enabled {@code true} to enable the UI, {@code false} otherwise.
+     * If the UI is disabled/hidden, then no callbacks will be triggered.
+     *
+     * @param state Current application state
      */
-    public void setEnabled(boolean enabled) {
-        Log.d(TAG, "Making UI enabled: " + enabled);
+    public void setState(@ConnectionState int state) {
+        Log.d(TAG, "Adjusting the UI to a new application state: " + state);
 
-        // TODO(b/111314230): disable RadioPagerAdapter (and/or its pages) as well
+        boolean enabled = (state == RadioAppServiceWrapper.STATE_CONNECTED);
 
         // Color the buttons so that they are grey in appearance if they are disabled.
         int tint = enabled
@@ -119,15 +138,37 @@ public class DisplayController {
             mForwardSeekButton.setEnabled(enabled);
             mForwardSeekButton.setColorFilter(tint);
         }
-
         if (mBackwardSeekButton != null) {
             mBackwardSeekButton.setEnabled(enabled);
             mBackwardSeekButton.setColorFilter(tint);
         }
-
+        if (mBandButton != null) {
+            mBandButton.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
         if (mFavoriteButton != null) {
-            mFavoriteButton.setEnabled(enabled);
-            mFavoriteButton.setColorFilter(tint);
+            mFavoriteButton.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
+        if (mTabs != null) {
+            mTabs.setVisibility(enabled ? View.VISIBLE : View.INVISIBLE);
+        }
+        if (mViewpager != null) {
+            mViewpager.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
+
+        if (mStatusMessage != null) {
+            mStatusMessage.setVisibility(enabled ? View.GONE : View.VISIBLE);
+            switch (state) {
+                case RadioAppServiceWrapper.STATE_CONNECTING:
+                case RadioAppServiceWrapper.STATE_CONNECTED:
+                    mStatusMessage.setText(null);
+                    break;
+                case RadioAppServiceWrapper.STATE_NOT_SUPPORTED:
+                    mStatusMessage.setText(R.string.radio_not_supported_text);
+                    break;
+                case RadioAppServiceWrapper.STATE_ERROR:
+                    mStatusMessage.setText(R.string.radio_failure_text);
+                    break;
+            }
         }
     }
 
@@ -168,44 +209,87 @@ public class DisplayController {
 
     /**
      * Sets the current radio channel (e.g. 88.5 FM).
+     *
+     * If the channel is of the same type (band) as currently displayed, animates the transition.
+     *
+     * @param sel Channel to display
      */
-    public void setChannel(String channel) {
+    public void setChannel(@Nullable ProgramSelector sel) {
         if (mChannel == null) return;
-        mChannel.setText(channel);
+
+        mChannelAnimator.cancel();
+
+        if (sel == null) {
+            mChannel.setText(null);
+        } else if (!ProgramSelectorExt.isAmFmProgram(sel)
+                || !ProgramSelectorExt.hasId(sel, ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY)) {
+            // channel animation is implemented for AM/FM only
+            mChannel.setText(ProgramSelectorExt.getDisplayName(sel, 0));
+        } else if (ProgramType.fromSelector(mDisplayedChannel)
+                != ProgramType.fromSelector(sel)) {
+            // it's a different band - don't animate
+            mChannel.setText(ProgramSelectorExt.getDisplayName(sel, 0));
+        } else {
+            int fromFreq = (int) mDisplayedChannel
+                    .getFirstId(ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY);
+            int toFreq = (int) sel.getFirstId(ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY);
+            mChannelAnimator.setIntValues((int) fromFreq, (int) toFreq);
+            mChannelAnimator.setDuration(CHANNEL_CHANGE_DURATION_MS);
+            mChannelAnimator.addUpdateListener(animation -> mChannel.setText(
+                    ProgramSelectorExt.formatAmFmFrequency((int) animation.getAnimatedValue(), 0)));
+            mChannelAnimator.start();
+        }
+
+        mDisplayedChannel = sel;
     }
 
     /**
-     * Sets the title of the currently playing song.
+     * Sets program details.
+     *
+     * @param details Program details (title/artist or radio text).
      */
-    public void setCurrentSongTitleAndArtist(String songTitle, String songArtist) {
-        if (mCurrentSongTitleAndArtist != null) {
-            boolean isTitleEmpty = TextUtils.isEmpty(songTitle);
-            boolean isArtistEmpty = TextUtils.isEmpty(songArtist);
-            String titleAndArtist = null;
-            if (!isTitleEmpty) {
-                titleAndArtist = songTitle.trim();
-                if (!isArtistEmpty) {
-                    titleAndArtist += '\u2014' + songArtist.trim();
-                }
-            } else if (!isArtistEmpty) {
-                titleAndArtist = songArtist.trim();
-            }
-            mCurrentSongTitleAndArtist.setText(titleAndArtist);
-            mCurrentSongTitleAndArtist.setVisibility(
-                    (isTitleEmpty && isArtistEmpty) ? View.INVISIBLE : View.VISIBLE);
+    public void setDetails(@Nullable String details) {
+        if (mDetails == null) return;
+        mDetails.setText(details);
+        mDetails.setVisibility(TextUtils.isEmpty(details) ? View.INVISIBLE : View.VISIBLE);
+    }
+
+    /**
+     * Sets program details (title/artist of currently playing song).
+     *
+     * @param songTitle Title of currently playing song
+     * @param songArtist Artist of currently playing song
+     */
+    public void setDetails(@Nullable String songTitle, @Nullable String songArtist) {
+        if (mDetails == null) return;
+        songTitle = songTitle.trim();
+        songArtist = songArtist.trim();
+        if (TextUtils.isEmpty(songTitle)) songTitle = null;
+        if (TextUtils.isEmpty(songArtist)) songArtist = null;
+
+        String details;
+        if (songTitle == null && songArtist == null) {
+            details = null;
+        } else if (songTitle == null) {
+            details = songArtist;
+        } else if (songArtist == null) {
+            details = songTitle;
+        } else {
+            details = songArtist + DETAILS_SEPARATOR + songTitle;
         }
+
+        setDetails(details);
     }
 
     /**
      * Sets the artist(s) of the currently playing song or current radio station information
      * (e.g. KOIT).
      */
-    public void setCurrentStation(String stationName) {
-        if (mCurrentStation != null) {
-            boolean isEmpty = TextUtils.isEmpty(stationName);
-            mCurrentStation.setText(isEmpty ? null : stationName.trim());
-            mCurrentStation.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
-        }
+    public void setStationName(@Nullable String name) {
+        if (mStationName == null) return;
+        boolean isEmpty = TextUtils.isEmpty(name);
+        mStationName.setText(isEmpty ? null : name.trim());
+        mStationName.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
     }
 
     private void onPlaybackStateChanged(@PlaybackStateCompat.State int state) {
@@ -224,5 +308,19 @@ public class DisplayController {
         if (mFavoriteButton == null) return;
         mFavoriteButton.setImageResource(
                 isFavorite ? R.drawable.ic_star_filled : R.drawable.ic_star_empty);
+    }
+
+    /**
+     * Starts seek animation.
+     *
+     * TODO(b/111340798): implement actual animation
+     * TODO(b/111340798): remove forward parameter, if not necessary for animation
+     *
+     * @param forward {@code true} for forward seek, {@code false} otherwise.
+     */
+    public void startSeekAnimation(boolean forward) {
+        // TODO(b/111340798): watch for timeout and if it happens, display metadata back
+        setStationName(null);
+        setDetails(null);
     }
 }

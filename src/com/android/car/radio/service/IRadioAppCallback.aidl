@@ -23,6 +23,13 @@ import android.hardware.radio.RadioManager;
  */
 oneway interface IRadioAppCallback {
     /**
+     * Called when hardware error has occured.
+     *
+     * Client must unbind from the {@link RadioAppService} after getting this callback.
+     */
+    void onHardwareError();
+
+    /**
      * Called when current program details changes.
      *
      * This might happen as a result of tuning to a different program or just metadata change.
@@ -37,4 +44,11 @@ oneway interface IRadioAppCallback {
      * @param state New playback state
      */
     void onPlaybackStateChanged(int state);
+
+    /**
+     * Called when program list changes.
+     *
+     * @param New program list
+     */
+    void onProgramListChanged(in List<RadioManager.ProgramInfo> plist);
 }
