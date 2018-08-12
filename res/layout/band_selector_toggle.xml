@@ -13,9 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_enabled="true"
-        android:color="@color/manual_tuner_button_text" />
-    <item android:state_enabled="false"
-        android:color="@color/control_button_disabled" />
-</selector>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+    <ImageButton
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        style="@style/RadioButton" />
+</merge>
