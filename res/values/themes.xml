@@ -14,12 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <resources>
-    <!--These Themes contain attributes required for components from support lib -->
-    <style name="PagedListTheme" parent="Theme.CarSupportWrapper.NoActionBar">
-    </style>
-
-    <style name="TabTheme" parent="Theme.CarSupportWrapper.NoActionBar">
-        <item name="android:elevation">@dimen/tab_elevation</item>
-        <item name="android:background">@android:color/transparent</item>
+    <style name="RecyclerViewTheme" parent="@android:Theme.DeviceDefault.NoActionBar">
     </style>
 </resources>
