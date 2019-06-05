@@ -16,16 +16,19 @@
 
 package com.android.car.radio.platform;
 
+import android.car.Car;
+import android.car.CarNotConnectedException;
+import android.car.media.CarAudioManager;
+import android.car.media.CarAudioPatchHandle;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.ServiceConnection;
 import android.hardware.radio.ProgramList;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager;
 import android.hardware.radio.RadioTuner;
 import android.media.AudioAttributes;
-import android.media.AudioDeviceInfo;
-import android.media.AudioManager;
-import android.media.HwAudioSource;
-import android.text.TextUtils;
+import android.os.IBinder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -43,14 +46,20 @@ import java.util.stream.Stream;
 public class RadioTunerExt {
     private static final String TAG = "BcRadioApp.tunerext";
 
+    // for now, we only support a single tuner with hardcoded address
+    private static final String HARDCODED_TUNER_ADDRESS = "tuner0";
+
     private final Object mLock = new Object();
     private final Object mTuneLock = new Object();
     private final RadioTuner mTuner;
+    private final Car mCar;
+    @Nullable private CarAudioManager mCarAudioManager;
 
-    private HwAudioSource mHwAudioSource;
+    @Nullable private CarAudioPatchHandle mAudioPatch;
+    @Nullable private Boolean mPendingMuteOperation;
 
-    @Nullable private ProgramSelector mOperationSelector;  // null for seek operations
-    @Nullable private TuneCallback mOperationResultCb;
+    @Nullable ProgramSelector mOperationSelector;  // null for seek operations
+    @Nullable TuneCallback mOperationResultCb;
 
     /**
      * A callback handling tune/seek operation result.
@@ -79,22 +88,76 @@ public class RadioTunerExt {
         mTuner = Objects.requireNonNull(tuner);
         cbExt.setTuneFailedCallback(this::onTuneFailed);
         cbExt.setProgramInfoCallback(this::onProgramInfoChanged);
-        mHwAudioSource = new HwAudioSource.Builder()
-                .setAudioDeviceInfo(findTunerDevice(context, null))
-                .setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build())
-                .build();
+        mCar = Car.createCar(context, mCarServiceConnection);
+        mCar.connect();
+    }
+
+    private final ServiceConnection mCarServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            synchronized (mLock) {
+                try {
+                    mCarAudioManager = (CarAudioManager)mCar.getCarManager(Car.AUDIO_SERVICE);
+                    if (mPendingMuteOperation != null) {
+                        boolean mute = mPendingMuteOperation;
+                        mPendingMuteOperation = null;
+                        Log.d(TAG, "Car connected, executing postponed operation: "
+                                + (mute ? "mute" : "unmute"));
+                        setMuted(mute);
+                    }
+                } catch (CarNotConnectedException e) {
+                    Log.e(TAG, "Car is not connected", e);
+                }
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            synchronized (mLock) {
+                mCarAudioManager = null;
+                mAudioPatch = null;
+            }
+        }
+    };
+
+    private boolean isSourceAvailableLocked(@NonNull String address)
+            throws CarNotConnectedException {
+        String[] sources = mCarAudioManager.getExternalSources();
+        return Stream.of(sources).anyMatch(source -> address.equals(source));
     }
 
     public boolean setMuted(boolean muted) {
         synchronized (mLock) {
-            if (muted) {
-                mHwAudioSource.stop();
-            } else {
-                mHwAudioSource.start();
+            if (mCarAudioManager == null) {
+                Log.d(TAG, "Car not connected yet, postponing operation: "
+                        + (muted ? "mute" : "unmute"));
+                mPendingMuteOperation = muted;
+                return true;
             }
-            return true;
+
+            // if it's already (not) muted - no need to (un)mute again
+            if ((mAudioPatch == null) == muted) return true;
+
+            try {
+                if (!muted) {
+                    if (!isSourceAvailableLocked(HARDCODED_TUNER_ADDRESS)) {
+                        Log.e(TAG, "Tuner source \"" + HARDCODED_TUNER_ADDRESS
+                                + "\" is not available");
+                        return false;
+                    }
+                    Log.v(TAG, "Creating audio patch for " + HARDCODED_TUNER_ADDRESS);
+                    mAudioPatch = mCarAudioManager.createAudioPatch(HARDCODED_TUNER_ADDRESS,
+                            AudioAttributes.USAGE_MEDIA, 0);
+                } else {
+                    Log.v(TAG, "Releasing audio patch");
+                    mCarAudioManager.releaseAudioPatch(mAudioPatch);
+                    mAudioPatch = null;
+                }
+                return true;
+            } catch (CarNotConnectedException e) {
+                Log.e(TAG, "Can't (un)mute - car is not connected", e);
+                return false;
+            }
         }
     }
 
@@ -147,23 +210,6 @@ public class RadioTunerExt {
             mTuner.cancel();
             mTuner.tune(selector);
         }
-    }
-
-    /**
-     * Get the {@link AudioDeviceInfo} instance with {@link AudioDeviceInfo#TYPE_FM_TUNER}
-     * by a given address. If the given address is null, returns the first found one.
-     */
-    private AudioDeviceInfo findTunerDevice(Context context, @Nullable String address) {
-        AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        AudioDeviceInfo[] devices = am.getDevices(AudioManager.GET_DEVICES_INPUTS);
-        for (AudioDeviceInfo device : devices) {
-            if (device.getType() == AudioDeviceInfo.TYPE_FM_TUNER) {
-                if (TextUtils.isEmpty(address) || address.equals(device.getAddress())) {
-                    return device;
-                }
-            }
-        }
-        return null;
     }
 
     private void markOperationFinishedLocked(boolean succeeded) {
@@ -243,10 +289,7 @@ public class RadioTunerExt {
             markOperationFinishedLocked(false);
         }
 
-        if (mHwAudioSource != null) {
-            mHwAudioSource.stop();
-            mHwAudioSource = null;
-        }
         mTuner.close();
+        mCar.disconnect();
     }
 }
