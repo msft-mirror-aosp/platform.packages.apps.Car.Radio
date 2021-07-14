@@ -195,6 +195,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     }
 
     private void onProgramListChanged() {
+        if (mProgramList == null) return;
         synchronized (mLock) {
             if (SystemClock.elapsedRealtime() - mLastProgramListPush > PROGRAM_LIST_RATE_LIMITING) {
                 pushProgramListUpdate();
@@ -203,6 +204,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     }
 
     private void pushProgramListUpdate() {
+        if (mProgramList == null) return;
         List<ProgramInfo> plist = mProgramList.toList();
 
         synchronized (mLock) {
@@ -244,8 +246,9 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
                 mAudioStreamController = null;
             }
             if (mProgramList != null) {
-                mProgramList.close();
+                ProgramList oldList = mProgramList;
                 mProgramList = null;
+                oldList.close();
             }
             if (mRadioTuner != null) {
                 mRadioTuner.close();
