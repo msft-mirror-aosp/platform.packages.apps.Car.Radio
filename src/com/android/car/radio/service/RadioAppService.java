@@ -18,6 +18,8 @@ package com.android.car.radio.service;
 
 import static com.android.car.radio.util.Remote.tryExec;
 
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.hardware.radio.ProgramList;
 import android.hardware.radio.ProgramSelector;
@@ -30,7 +32,9 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.service.media.MediaBrowserService;
+import android.util.IndentingPrintWriter;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.Lifecycle;
@@ -68,6 +72,11 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     public static String ACTION_APP_SERVICE = "com.android.car.radio.ACTION_APP_SERVICE";
     private static final long PROGRAM_LIST_RATE_LIMITING = 1000;
 
+    /** Returns the {@link ComponentName} that represents this {@link MediaBrowserService}. */
+    public static @NonNull ComponentName getMediaSourceComp(Context context) {
+        return new ComponentName(context, RadioAppService.class);
+    }
+
     private final Object mLock = new Object();
     private final LifecycleRegistry mLifecycleRegistry = new LifecycleRegistry(this);
     private final List<IRadioAppCallback> mRadioAppCallbacks = new ArrayList<>();
@@ -85,10 +94,13 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     private TunerSession mMediaSession;
 
     // current observables state for newly bound IRadioAppCallbacks
+    @GuardedBy("mLock")
     private ProgramInfo mCurrentProgram = null;
+    @GuardedBy("mLock")
     private int mCurrentPlaybackState = PlaybackState.STATE_NONE;
+    @GuardedBy("mLock")
     private long mLastProgramListPush;
-
+    @GuardedBy("mLock")
     private RegionConfig mRegionConfigCache;
 
     private SkipController mSkipController;
@@ -132,14 +144,13 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
             mProgramList.addOnCompleteListener(this::pushProgramListUpdate);
         }
 
-        tuneToDefault(null);
-        mAudioStreamController.requestMuted(false);
-
         mLifecycleRegistry.markState(Lifecycle.State.CREATED);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "onStartCommand intent [%s] flags[%d] startId[%d]",
+                intent.toString(), flags, startId);
         mLifecycleRegistry.markState(Lifecycle.State.STARTED);
         if (BrowseTree.ACTION_PLAY_BROADCASTRADIO.equals(intent.getAction())) {
             Log.i(TAG, "Executing general play radio intent");
@@ -153,6 +164,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
 
     @Override
     public IBinder onBind(Intent intent) {
+        Log.i(TAG, "onBind intent[" + intent + "]");
         mLifecycleRegistry.markState(Lifecycle.State.STARTED);
         if (mRadioTuner == null) return null;
         if (ACTION_APP_SERVICE.equals(intent.getAction())) {
@@ -186,6 +198,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     }
 
     private void onPlaybackStateChanged(int newState) {
+        Log.d(TAG, "onPlaybackStateChanged new state [%d]", newState);
         synchronized (mLock) {
             mCurrentPlaybackState = newState;
             for (IRadioAppCallback callback : mRadioAppCallbacks) {
@@ -195,6 +208,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     }
 
     private void onProgramListChanged() {
+        if (mProgramList == null) return;
         synchronized (mLock) {
             if (SystemClock.elapsedRealtime() - mLastProgramListPush > PROGRAM_LIST_RATE_LIMITING) {
                 pushProgramListUpdate();
@@ -203,6 +217,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     }
 
     private void pushProgramListUpdate() {
+        if (mProgramList == null) return;
         List<ProgramInfo> plist = mProgramList.toList();
 
         synchronized (mLock) {
@@ -244,8 +259,9 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
                 mAudioStreamController = null;
             }
             if (mProgramList != null) {
-                mProgramList.close();
+                ProgramList oldList = mProgramList;
                 mProgramList = null;
+                oldList.close();
             }
             if (mRadioTuner != null) {
                 mRadioTuner.close();
@@ -279,10 +295,25 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
 
     @Override
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
-        if (mSkipController != null) {
-            pw.println("SkipController:"); mSkipController.dump(pw, "  ");
-        } else {
-            pw.println("no SkipController");
+        try (IndentingPrintWriter writer = new IndentingPrintWriter(pw)) {
+            pw.println("RadioAppService:");
+            writer.increaseIndent();
+            if (mSkipController != null) {
+                writer.increaseIndent();
+                mSkipController.dump(writer);
+                writer.decreaseIndent();
+            } else {
+                pw.println("No SkipController");
+            }
+
+            if (mAudioStreamController != null) {
+                writer.increaseIndent();
+                mAudioStreamController.dump(writer);
+                writer.decreaseIndent();
+            } else {
+                pw.println("No AudioStreamController");
+            }
+            writer.decreaseIndent();
         }
     }
 
@@ -368,6 +399,21 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
             if (mAudioStreamController == null) return;
             if (muted) mRadioTuner.cancel();
             mAudioStreamController.requestMuted(muted);
+        }
+
+        @Override
+        public void tuneToDefaultIfNeeded() {
+            synchronized (mLock) {
+                if (mRadioTuner == null) {
+                    throw new IllegalStateException("Tuner session is closed");
+                }
+
+                if (mCurrentPlaybackState != PlaybackState.STATE_NONE) {
+                    return;
+                }
+            }
+
+            tuneToDefault(null);
         }
 
         @Override
