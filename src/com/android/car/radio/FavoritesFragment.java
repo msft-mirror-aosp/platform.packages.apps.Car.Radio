@@ -26,22 +26,24 @@ import android.view.ViewGroup;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.car.broadcastradio.support.Program;
 import com.android.car.radio.storage.RadioStorage;
+import com.android.car.radio.util.Log;
 import com.android.car.ui.baselayout.Insets;
 import com.android.car.ui.baselayout.InsetsChangedListener;
+import com.android.car.ui.recyclerview.CarUiRecyclerView;
 
 /**
  * Fragment that shows a list of all the current favorite radio stations
  */
 public class FavoritesFragment extends Fragment implements InsetsChangedListener {
+    private static final String TAG = "BcRadioApp.FavFrg";
 
     private RadioController mRadioController;
     private BrowseAdapter mBrowseAdapter;
     private RadioStorage mRadioStorage;
-    private RecyclerView mBrowseList;
+    private CarUiRecyclerView mBrowseList;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -72,11 +74,17 @@ public class FavoritesFragment extends Fragment implements InsetsChangedListener
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
+
         if (!isVisibleToUser && mBrowseAdapter != null) {
             mBrowseAdapter.removeFormerFavorites();
         }
+
         if (isVisibleToUser) {
-            mRadioController.setSkipMode(SkipMode.FAVORITES);
+            try {
+                mRadioController.setSkipMode(SkipMode.FAVORITES);
+            } catch (IllegalStateException e) {
+                Log.e(TAG, "Can't set skip mode", e);
+            }
         }
     }
 

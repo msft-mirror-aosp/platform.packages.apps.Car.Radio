@@ -14,6 +14,10 @@
 // limitations under the License.
 //
 
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 android_app {
     name: "CarRadioApp",
 
@@ -27,13 +31,13 @@ android_app {
 
     platform_apis: true,
 
-    required: ["privapp_whitelist_com.android.car.radio"],
+    required: ["allowed_privapp_com.android.car.radio"],
 
     certificate: "platform",
 
     privileged: true,
 
-    libs: ["android.car"],
+    libs: ["android.car-system-stubs"],
 
     static_libs: [
         "androidx.lifecycle_lifecycle-livedata",
