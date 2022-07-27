@@ -118,7 +118,6 @@ public class RadioTunerExt {
                 mOperationResultCb = resultCb;
             }
 
-            mTuner.cancel();
             int res = mTuner.scan(
                     forward ? RadioTuner.DIRECTION_UP : RadioTuner.DIRECTION_DOWN, false);
             if (res != RadioManager.STATUS_OK) {
@@ -135,7 +134,6 @@ public class RadioTunerExt {
             markOperationFinishedLocked(false);
             mOperationResultCb = resultCb;
         }
-        mTuner.cancel();
         int res =
                 mTuner.step(forward ? RadioTuner.DIRECTION_UP : RadioTuner.DIRECTION_DOWN, false);
         if (res != RadioManager.STATUS_OK) {
@@ -154,7 +152,6 @@ public class RadioTunerExt {
                 mOperationResultCb = resultCb;
             }
 
-            mTuner.cancel();
             mTuner.tune(selector);
         }
     }
