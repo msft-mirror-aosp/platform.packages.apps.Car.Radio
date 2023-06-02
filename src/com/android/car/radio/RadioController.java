@@ -96,6 +96,14 @@ public class RadioController {
     }
 
     /**
+     * See {@link RadioAppServiceWrapper#getConnectionState}.
+     */
+    @NonNull
+    public LiveData<Integer> getConnectionState() {
+        return mAppService.getConnectionState();
+    }
+
+    /**
      * See {@link RadioAppServiceWrapper#getPlaybackState}.
      */
     @NonNull
