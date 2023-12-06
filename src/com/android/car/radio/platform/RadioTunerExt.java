@@ -119,7 +119,7 @@ public final class RadioTunerExt {
             mOperationResultCb = resultCb;
         }
 
-        int res = mTuner.scan(
+        int res = mTuner.seek(
                 forward ? RadioTuner.DIRECTION_UP : RadioTuner.DIRECTION_DOWN,
                 /* skipSubChannel= */ false);
         if (res != RadioManager.STATUS_OK) {
