@@ -190,10 +190,16 @@ public class RadioActivity extends FragmentActivity implements InsetsChangedList
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_MEDIA_STEP_FORWARD:
-                mRadioController.step(true);
+                mRadioController.step(/* forward= */ true);
                 return true;
             case KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD:
-                mRadioController.step(false);
+                mRadioController.step(/* forward= */ false);
+                return true;
+            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                mRadioController.seek(/* forward= */ true);
+                return true;
+            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                mRadioController.seek(/* forward= */ false);
                 return true;
             default:
                 return super.onKeyDown(keyCode, event);
