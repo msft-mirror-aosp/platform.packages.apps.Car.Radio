@@ -142,6 +142,13 @@ public class RadioController {
     }
 
     /**
+     * Seeks the radio tuner in the given direction, @see RadioAppServiceWrapper#seek(boolean).
+     */
+    public void seek(boolean forward) {
+        mAppService.seek(forward);
+    }
+
+    /**
      * Switch radio band. Currently, this only supports FM and AM bands.
      *
      * @param pt {@link ProgramType} to switch to.
