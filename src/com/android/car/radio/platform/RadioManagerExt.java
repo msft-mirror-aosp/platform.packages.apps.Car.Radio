@@ -25,11 +25,11 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.ArrayMap;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.Nullable;
 
 import com.android.car.broadcastradio.support.platform.RadioMetadataExt;
 import com.android.car.radio.util.Log;
-import com.android.internal.annotations.GuardedBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;

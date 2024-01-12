@@ -19,7 +19,7 @@ package com.android.car.radio;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioMetadata;
-import android.media.session.PlaybackState;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -212,13 +212,13 @@ public class RadioController {
         mAppService.skip(true);
     }
 
-    private void onSwitchToPlayState(@PlaybackState.State int newPlayState) {
+    private void onSwitchToPlayState(@PlaybackStateCompat.State int newPlayState) {
         switch (newPlayState) {
-            case PlaybackState.STATE_PLAYING:
+            case PlaybackStateCompat.STATE_PLAYING:
                 mAppService.setMuted(false);
                 break;
-            case PlaybackState.STATE_PAUSED:
-            case PlaybackState.STATE_STOPPED:
+            case PlaybackStateCompat.STATE_PAUSED:
+            case PlaybackStateCompat.STATE_STOPPED:
                 mAppService.setMuted(true);
                 break;
             default:

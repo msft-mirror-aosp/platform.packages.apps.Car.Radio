@@ -16,7 +16,6 @@
 package com.android.car.radio.service;
 
 import android.os.RemoteException;
-import android.util.IndentingPrintWriter;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
@@ -25,6 +24,7 @@ import androidx.lifecycle.LiveData;
 
 import com.android.car.broadcastradio.support.Program;
 import com.android.car.radio.SkipMode;
+import com.android.car.radio.util.IndentingPrintWriter;
 import com.android.car.radio.util.Log;
 
 import java.util.List;
