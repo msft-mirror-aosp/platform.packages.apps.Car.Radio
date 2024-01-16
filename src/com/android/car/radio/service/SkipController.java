@@ -39,7 +39,7 @@ final class SkipController {
 
     private final Object mLock = new Object();
 
-    private final IRadioAppService.Stub mService;
+    private final IRadioAppService mService;
 
     @GuardedBy("mLock")
     private List<Program> mFavorites;
@@ -50,7 +50,7 @@ final class SkipController {
     @GuardedBy("mLock")
     private SkipMode mSkipMode;
 
-    SkipController(@NonNull IRadioAppService.Stub service,
+    SkipController(@NonNull IRadioAppService service,
             @NonNull LiveData<List<Program>> favorites, @NonNull SkipMode initialMode) {
         mService = service;
         mSkipMode = initialMode;

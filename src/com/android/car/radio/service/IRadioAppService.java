@@ -17,11 +17,10 @@
 package com.android.car.radio.service;
 
 import android.hardware.radio.ProgramSelector;
+import android.os.RemoteException;
 
 import com.android.car.radio.bands.ProgramType;
 import com.android.car.radio.bands.RegionConfig;
-import com.android.car.radio.service.IRadioAppCallback;
-import com.android.car.radio.service.ITuneCallback;
 
 /**
  * An interface to the backend Radio app's service.
@@ -32,32 +31,32 @@ interface IRadioAppService {
      *
      * Triggers state updates on newly added callback.
      */
-    void addCallback(in IRadioAppCallback callback);
+    void addCallback(IRadioAppCallback callback) throws RemoteException;
 
     /**
      * Removes {@link RadioAppService} callback.
      */
-    void removeCallback(in IRadioAppCallback callback);
+    void removeCallback(IRadioAppCallback callback);
 
     /**
      * Tunes to a given program.
      */
-    void tune(in ProgramSelector sel, in ITuneCallback callback);
+    void tune(ProgramSelector sel, ITuneCallback callback);
 
     /**
      * Seeks forward or backwards.
      */
-    void seek(boolean forward, in ITuneCallback callback);
+    void seek(boolean forward, ITuneCallback callback);
 
     /**
      * Steps forward or backwards.
      */
-    void step(boolean forward, in ITuneCallback callback);
+    void step(boolean forward, ITuneCallback callback);
 
     /**
      * Skips forward or backwards; the meaning of "skip" is defined by setSkipMode().
      */
-    void skip(boolean forward, in ITuneCallback callback);
+    void skip(boolean forward, ITuneCallback callback) throws RemoteException;
 
     /**
       * Sets the behavior of skip()
@@ -80,7 +79,7 @@ interface IRadioAppService {
      *
      * @param band Program type to switch to
      */
-    void switchBand(in ProgramType band);
+    void switchBand(ProgramType band);
 
     /**
      * States whether program list is supported on current device or not.

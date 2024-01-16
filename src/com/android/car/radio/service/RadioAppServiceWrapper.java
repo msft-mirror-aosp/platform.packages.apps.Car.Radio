@@ -98,7 +98,7 @@ public class RadioAppServiceWrapper {
         mPlaybackState.postValue(PlaybackStateCompat.STATE_NONE);
     }
 
-    private static class TuneCallbackAdapter extends ITuneCallback.Stub {
+    private static class TuneCallbackAdapter implements ITuneCallback {
         private final TuneCallback mCallback;
 
         private TuneCallbackAdapter(@Nullable TuneCallback cb) {
@@ -139,8 +139,8 @@ public class RadioAppServiceWrapper {
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName className, IBinder binder) {
-            RadioAppServiceWrapper.this.onServiceConnected(binder,
-                    Objects.requireNonNull(IRadioAppService.Stub.asInterface(binder)));
+            IRadioAppService service = ((RadioAppService.LocalBinder) binder).getLocalService();
+            RadioAppServiceWrapper.this.onServiceConnected(binder, Objects.requireNonNull(service));
         }
 
         @Override
@@ -159,7 +159,7 @@ public class RadioAppServiceWrapper {
         }
     };
 
-    private final IRadioAppCallback mCallback = new IRadioAppCallback.Stub() {
+    private final IRadioAppCallback mCallback = new IRadioAppCallback() {
         @Override
         public void onHardwareError() {
             onServiceFailure();

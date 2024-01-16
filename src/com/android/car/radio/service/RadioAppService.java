@@ -25,6 +25,7 @@ import android.hardware.radio.ProgramList;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioTuner;
+import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -114,7 +115,7 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
 
         Log.i(TAG, "Starting RadioAppService...");
 
-        mWrapper = new RadioAppServiceWrapper(mBinder);
+        mWrapper = new RadioAppServiceWrapper(mLocalService);
         mRadioManager = new RadioManagerExt(this);
         mRadioStorage = RadioStorage.getInstance(this);
         mImageCache = new ImageMemoryCache(mRadioManager, 1000);
@@ -132,7 +133,7 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
         mBrowseTree.setAmFmRegionConfig(mRadioManager.getAmFmRegionConfig());
         LiveData<List<Program>> favorites = mRadioStorage.getFavorites();
         SkipMode skipMode = mRadioStorage.getSkipMode();
-        mSkipController = new SkipController(mBinder, favorites, skipMode);
+        mSkipController = new SkipController(mLocalService, favorites, skipMode);
         favorites.observe(this, favs -> mBrowseTree.setFavorites(new HashSet<>(favs)));
 
         mProgramList = mRadioTuner.getDynamicProgramList(null);
@@ -171,7 +172,7 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
         mLifecycleRegistry.markState(Lifecycle.State.STARTED);
         if (mRadioTuner == null) return null;
         if (ACTION_APP_SERVICE.equals(intent.getAction())) {
-            return mBinder;
+            return mLocalBinder;
         }
         return super.onBind(intent);
     }
@@ -265,7 +266,7 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
 
             if (pt == null) pt = ProgramType.FM;
             Log.i(TAG, "No recently selected program set, selecting default channel for " + pt);
-            pt.tuneToDefault(mRadioTuner, mWrapper.getRegionConfig(), tuneCb);
+            pt.tuneToDefault(mRadioTuner, mLocalService.getRegionConfig(), tuneCb);
         }
     }
 
@@ -334,7 +335,15 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
         }
     }
 
-    private final IRadioAppService.Stub mBinder = new IRadioAppService.Stub() {
+    private final IBinder mLocalBinder = new LocalBinder();
+
+    public class LocalBinder extends Binder {
+        IRadioAppService getLocalService() {
+            return mLocalService;
+        }
+    }
+
+    private final IRadioAppService mLocalService = new IRadioAppService() {
         @Override
         public void addCallback(IRadioAppCallback callback) throws RemoteException {
             synchronized (mLock) {
@@ -384,7 +393,6 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
         @Override
         public void skip(boolean forward, ITuneCallback callback) throws RemoteException {
             Objects.requireNonNull(callback);
-
             mSkipController.skip(forward, callback);
         }
 

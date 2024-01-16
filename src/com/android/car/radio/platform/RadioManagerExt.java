@@ -21,6 +21,7 @@ import android.graphics.Bitmap;
 import android.hardware.radio.RadioManager;
 import android.hardware.radio.RadioManager.BandDescriptor;
 import android.hardware.radio.RadioTuner;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.ArrayMap;
@@ -196,6 +197,10 @@ public final class RadioManagerExt {
             return null;
         }
 
-        return tuner.getMetadataImage(localId);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            return tuner.getMetadataImage(localId);
+        } else {
+            return null;
+        }
     }
 }
