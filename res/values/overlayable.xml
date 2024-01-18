@@ -16,6 +16,7 @@ REGENERATE USING packages/apps/Car/libs/tools/rro/generate-overlayable.py
 <resources>
   <overlayable name="CarRadio">
     <policy type="system|product|signature">
+      <item type="bool" name="show_menu_item_selector"/>
       <item type="color" name="accent_color"/>
       <item type="color" name="band_selector_flat_text_color"/>
       <item type="color" name="band_selector_flat_text_color_selected"/>
