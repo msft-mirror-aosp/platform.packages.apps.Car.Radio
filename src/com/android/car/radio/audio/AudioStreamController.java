@@ -20,8 +20,7 @@ import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
-import android.media.session.PlaybackState;
-import android.util.IndentingPrintWriter;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
@@ -29,6 +28,7 @@ import androidx.annotation.Nullable;
 
 import com.android.car.radio.platform.RadioTunerExt;
 import com.android.car.radio.platform.RadioTunerExt.TuneCallback;
+import com.android.car.radio.util.IndentingPrintWriter;
 import com.android.car.radio.util.Log;
 
 import java.lang.annotation.Retention;
@@ -83,7 +83,7 @@ public class AudioStreamController {
      */
     private boolean mHasSomeFocus;
 
-    private int mCurrentPlaybackState = PlaybackState.STATE_NONE;
+    private int mCurrentPlaybackState = PlaybackStateCompat.STATE_NONE;
     private Object mTuningToken;
 
     /**
@@ -197,15 +197,15 @@ public class AudioStreamController {
             int state;
             switch (operation) {
                 case OPERATION_TUNE:
-                    state = PlaybackState.STATE_CONNECTING;
+                    state = PlaybackStateCompat.STATE_CONNECTING;
                     break;
                 case OPERATION_SEEK_FWD:
                 case OPERATION_STEP_FWD:
-                    state = PlaybackState.STATE_SKIPPING_TO_NEXT;
+                    state = PlaybackStateCompat.STATE_SKIPPING_TO_NEXT;
                     break;
                 case OPERATION_SEEK_BKW:
                 case OPERATION_STEP_BKW:
-                    state = PlaybackState.STATE_SKIPPING_TO_PREVIOUS;
+                    state = PlaybackStateCompat.STATE_SKIPPING_TO_PREVIOUS;
                     break;
                 default:
                     throw new IllegalArgumentException("Invalid operation: " + operation);
@@ -221,7 +221,7 @@ public class AudioStreamController {
             if (mTuningToken != token) return;
             mTuningToken = null;
             notifyPlaybackStateLocked(succeeded
-                    ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_ERROR);
+                    ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_ERROR);
         }
     }
 
@@ -236,13 +236,13 @@ public class AudioStreamController {
         synchronized (mLock) {
             if (muted) {
                 if (mTuningToken == null) {
-                    notifyPlaybackStateLocked(PlaybackState.STATE_STOPPED);
+                    notifyPlaybackStateLocked(PlaybackStateCompat.STATE_STOPPED);
                 }
                 return abandonAudioFocusLocked();
             } else {
                 if (!requestAudioFocusLocked()) return false;
                 if (mTuningToken == null) {
-                    notifyPlaybackStateLocked(PlaybackState.STATE_PLAYING);
+                    notifyPlaybackStateLocked(PlaybackStateCompat.STATE_PLAYING);
                 }
                 return true;
             }
@@ -263,7 +263,7 @@ public class AudioStreamController {
                     Log.i(TAG, "Unexpected audio focus loss");
                     mHasSomeFocus = false;
                     mRadioTunerExt.setMuted(true);
-                    notifyPlaybackStateLocked(PlaybackState.STATE_STOPPED);
+                    notifyPlaybackStateLocked(PlaybackStateCompat.STATE_STOPPED);
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:

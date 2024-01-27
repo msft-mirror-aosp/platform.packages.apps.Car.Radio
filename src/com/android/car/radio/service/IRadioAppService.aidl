@@ -17,9 +17,7 @@
 package com.android.car.radio.service;
 
 import android.hardware.radio.ProgramSelector;
-import android.hardware.radio.RadioManager;
 
-import com.android.car.broadcastradio.support.Program;
 import com.android.car.radio.bands.ProgramType;
 import com.android.car.radio.bands.RegionConfig;
 import com.android.car.radio.service.IRadioAppCallback;
