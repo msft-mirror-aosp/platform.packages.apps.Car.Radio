@@ -18,10 +18,10 @@ package com.android.car.radio.platform;
 
 import android.graphics.Bitmap;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.Nullable;
 
 import com.android.car.broadcastradio.support.platform.ImageResolver;
-import com.android.internal.annotations.GuardedBy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

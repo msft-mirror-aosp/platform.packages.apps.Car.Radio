@@ -43,6 +43,7 @@ android_app {
         "androidx.lifecycle_lifecycle-livedata",
         "androidx-constraintlayout_constraintlayout",
         "androidx.room_room-runtime",
+        "androidx.media_media",
         "car-apps-common",
         "car-media-common",
         "car-broadcastradio-support",

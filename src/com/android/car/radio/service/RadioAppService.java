@@ -25,14 +25,13 @@ import android.hardware.radio.ProgramList;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioTuner;
-import android.media.browse.MediaBrowser.MediaItem;
-import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.service.media.MediaBrowserService;
-import android.util.IndentingPrintWriter;
+import android.support.v4.media.MediaBrowserCompat.MediaItem;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
@@ -41,6 +40,7 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 import androidx.lifecycle.LiveData;
+import androidx.media.MediaBrowserServiceCompat;
 
 import com.android.car.broadcastradio.support.Program;
 import com.android.car.broadcastradio.support.media.BrowseTree;
@@ -54,6 +54,7 @@ import com.android.car.radio.platform.RadioManagerExt;
 import com.android.car.radio.platform.RadioTunerExt;
 import com.android.car.radio.platform.RadioTunerExt.TuneCallback;
 import com.android.car.radio.storage.RadioStorage;
+import com.android.car.radio.util.IndentingPrintWriter;
 import com.android.car.radio.util.Log;
 
 import java.io.FileDescriptor;
@@ -66,7 +67,7 @@ import java.util.Objects;
 /**
  * A service handling hardware tuner session and audio streaming.
  */
-public class RadioAppService extends MediaBrowserService implements LifecycleOwner {
+public class RadioAppService extends MediaBrowserServiceCompat implements LifecycleOwner {
     private static final String TAG = "BcRadioApp.service";
 
     public static String ACTION_APP_SERVICE = "com.android.car.radio.ACTION_APP_SERVICE";
@@ -97,7 +98,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     @GuardedBy("mLock")
     private ProgramInfo mCurrentProgram = null;
     @GuardedBy("mLock")
-    private int mCurrentPlaybackState = PlaybackState.STATE_NONE;
+    private int mCurrentPlaybackState = PlaybackStateCompat.STATE_NONE;
     @GuardedBy("mLock")
     private long mLastProgramListPush;
     @GuardedBy("mLock")
@@ -427,7 +428,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
                     throw new IllegalStateException("Tuner session is closed");
                 }
 
-                if (mCurrentPlaybackState != PlaybackState.STATE_NONE) {
+                if (mCurrentPlaybackState != PlaybackStateCompat.STATE_NONE) {
                     return;
                 }
             }

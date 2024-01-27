@@ -27,10 +27,10 @@ import android.media.AudioManager;
 import android.media.HwAudioSource;
 import android.text.TextUtils;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.Nullable;
 
 import com.android.car.radio.util.Log;
-import com.android.internal.annotations.GuardedBy;
 
 import java.util.Objects;
 import java.util.stream.Stream;
