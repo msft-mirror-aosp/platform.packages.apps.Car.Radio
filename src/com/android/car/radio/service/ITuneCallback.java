@@ -13,6 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.car.radio.bands;
 
-parcelable ProgramType;
+package com.android.car.radio.service;
+
+/**
+ * Asynchronous result for tune/seek operation.
+ */
+interface ITuneCallback {
+    /**
+     * Called when tune operation has finished.
+     *
+     * @param succeeded States whether operation has succeeded or not.
+     */
+    void onFinished(boolean succeeded);
+}
