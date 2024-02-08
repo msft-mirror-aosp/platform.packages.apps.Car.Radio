@@ -25,6 +25,7 @@ import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.HwAudioSource;
+import android.os.Build;
 import android.text.TextUtils;
 
 import androidx.annotation.GuardedBy;
@@ -119,9 +120,14 @@ public final class RadioTunerExt {
             mOperationResultCb = resultCb;
         }
 
-        int res = mTuner.seek(
-                forward ? RadioTuner.DIRECTION_UP : RadioTuner.DIRECTION_DOWN,
-                /* skipSubChannel= */ false);
+        int direction =  forward ? RadioTuner.DIRECTION_UP : RadioTuner.DIRECTION_DOWN;
+        boolean skipSubChannel = false;
+        int res;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            res = mTuner.seek(direction, skipSubChannel);
+        } else {
+            res = mTuner.scan(direction, skipSubChannel);
+        }
         if (res != RadioManager.STATUS_OK) {
             throw new RuntimeException("Seek failed with result of " + res);
         }
