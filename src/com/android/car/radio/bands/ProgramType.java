@@ -128,12 +128,14 @@ public abstract class ProgramType implements Parcelable {
         if (!ProgramSelectorExt.isAmFmProgram(sel)) return null;
 
         // this is an AM/FM program; let's check whether it's AM or FM
-        if (!ProgramSelectorExt.hasId(sel, ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY)) {
+        if (!ProgramSelectorExt.hasId(sel, ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY)
+                && !ProgramSelectorExt.hasId(sel,
+                ProgramSelector.IDENTIFIER_TYPE_HD_STATION_ID_EXT)) {
             Log.e(TAG, "AM/FM program selector with missing frequency");
             return FM;
         }
 
-        long freq = sel.getFirstId(ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY);
+        long freq = ProgramSelectorExt.getFrequency(sel);
         if (ProgramSelectorExt.isAmFrequency(freq)) return AM;
         if (ProgramSelectorExt.isFmFrequency(freq)) return FM;
 
