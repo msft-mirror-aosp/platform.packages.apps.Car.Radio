@@ -21,7 +21,6 @@ import android.graphics.Bitmap;
 import android.hardware.radio.RadioManager;
 import android.hardware.radio.RadioManager.BandDescriptor;
 import android.hardware.radio.RadioTuner;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.ArrayMap;
@@ -199,18 +198,13 @@ public final class RadioManagerExt {
             return null;
         }
 
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            try {
-                Method method = tuner.getClass().getDeclaredMethod("getMetadataImage",
-                        int.class);
-                method.setAccessible(true);
-                return (Bitmap) method.invoke(tuner, localId);
-            } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-                Log.e(TAG, "Not able to get metadata image with the tuner.");
-                return null;
-            }
-        } else {
-            return tuner.getMetadataImage(localId);
+        try {
+            Method method = tuner.getClass().getDeclaredMethod("getMetadataImage", int.class);
+            method.setAccessible(true);
+            return (Bitmap) method.invoke(tuner, localId);
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            Log.e(TAG, "Not able to get metadata image with the tuner.");
+            return null;
         }
     }
 }
