@@ -43,12 +43,13 @@ android_app {
     static_libs: [
         "androidx.lifecycle_lifecycle-livedata",
         "androidx-constraintlayout_constraintlayout",
+        "androidx.recyclerview_recyclerview",
         "androidx.room_room-runtime",
         "androidx.media_media",
-        "car-apps-common",
-        "car-media-common",
-        "car-broadcastradio-support",
-        "car-ui-lib",
+        "car-apps-common-prebuilt",
+        "car-media-common-prebuilt",
+        "car-broadcastradio-support-prebuilt",
+        "car-ui-lib-prebuilt",
     ],
 
     plugins: ["androidx.room_room-compiler-plugin"],
