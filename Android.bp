@@ -29,8 +29,6 @@ android_app {
         local_include_dirs: ["src"],
     },
 
-    platform_apis: true,
-
     required: ["allowed_privapp_com.android.car.radio"],
 
     certificate: "platform",
@@ -38,15 +36,20 @@ android_app {
     privileged: true,
 
     libs: ["android.car-system-stubs"],
+    min_sdk_version: "33",
+    target_sdk_version: "35",
+    sdk_version: "system_current",
 
     static_libs: [
         "androidx.lifecycle_lifecycle-livedata",
         "androidx-constraintlayout_constraintlayout",
+        "androidx.recyclerview_recyclerview",
         "androidx.room_room-runtime",
-        "car-apps-common",
-        "car-media-common",
-        "car-broadcastradio-support",
-        "car-ui-lib",
+        "androidx.media_media",
+        "car-apps-common-prebuilt",
+        "car-media-common-prebuilt",
+        "car-broadcastradio-support-prebuilt",
+        "car-ui-lib-prebuilt",
     ],
 
     plugins: ["androidx.room_room-compiler-plugin"],
@@ -59,11 +62,5 @@ android_app {
 
     dex_preopt: {
         enabled: false,
-    },
-
-    product_variables: {
-        pdk: {
-            enabled: false,
-        },
     },
 }

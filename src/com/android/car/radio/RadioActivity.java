@@ -67,7 +67,7 @@ public class RadioActivity extends FragmentActivity implements InsetsChangedList
     private ToolbarController mToolbar;
     private ViewPager mViewPager;
     private RadioPagerAdapter mRadioPagerAdapter;
-
+    private boolean mShowMenuItemSelector;
     private boolean mUseSourceLogoForAppSelector;
     private MediaTrampolineHelper mMediaTrampoline;
 
@@ -104,6 +104,8 @@ public class RadioActivity extends FragmentActivity implements InsetsChangedList
                 new RadioPagerAdapter(this, getSupportFragmentManager(), mRadioController);
         mViewPager = findViewById(R.id.viewpager);
 
+        mShowMenuItemSelector =
+                getResources().getBoolean(R.bool.show_menu_item_selector);
         mUseSourceLogoForAppSelector =
                 getResources().getBoolean(R.bool.use_media_source_logo_for_app_selector);
 
@@ -188,10 +190,16 @@ public class RadioActivity extends FragmentActivity implements InsetsChangedList
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_MEDIA_STEP_FORWARD:
-                mRadioController.step(true);
+                mRadioController.step(/* forward= */ true);
                 return true;
             case KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD:
-                mRadioController.step(false);
+                mRadioController.step(/* forward= */ false);
+                return true;
+            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                mRadioController.seek(/* forward= */ true);
+                return true;
+            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                mRadioController.seek(/* forward= */ false);
                 return true;
             default:
                 return super.onKeyDown(keyCode, event);
@@ -236,20 +244,21 @@ public class RadioActivity extends FragmentActivity implements InsetsChangedList
                     mRadioController.switchBand(programType);
                 })
                 .build();
-
-        Intent appSelectorIntent = MediaSource.getSourceSelectorIntent(this, false);
-        MenuItem appSelectorMenuItem = MenuItem.builder(this)
-                .setIcon(mUseSourceLogoForAppSelector
-                        ? R.drawable.logo_fm_radio : R.drawable.ic_app_switch)
-                .setTinted(!mUseSourceLogoForAppSelector)
-                .setOnClickListener(m -> startActivity(appSelectorIntent))
-                .build();
-
-        ArrayList<MenuItem> menuItems = new ArrayList<>(2);
+        ArrayList<MenuItem> menuItems = new ArrayList<>();
         if (mIsConnected) {
             menuItems.add(bandSelectorMenuItem);
         }
-        menuItems.add(appSelectorMenuItem);
+
+        if (mShowMenuItemSelector) {
+            Intent appSelectorIntent = MediaSource.getSourceSelectorIntent(this, false);
+            MenuItem appSelectorMenuItem = MenuItem.builder(this)
+                    .setIcon(mUseSourceLogoForAppSelector
+                            ? R.drawable.logo_fm_radio : R.drawable.ic_app_switch)
+                    .setTinted(!mUseSourceLogoForAppSelector)
+                    .setOnClickListener(m -> startActivity(appSelectorIntent))
+                    .build();
+            menuItems.add(appSelectorMenuItem);
+        }
         mToolbar.setMenuItems(menuItems);
     }
 

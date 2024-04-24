@@ -25,12 +25,14 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.ArrayMap;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.Nullable;
 
 import com.android.car.broadcastradio.support.platform.RadioMetadataExt;
 import com.android.car.radio.util.Log;
-import com.android.internal.annotations.GuardedBy;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -196,6 +198,13 @@ public final class RadioManagerExt {
             return null;
         }
 
-        return tuner.getMetadataImage(localId);
+        try {
+            Method method = tuner.getClass().getDeclaredMethod("getMetadataImage", int.class);
+            method.setAccessible(true);
+            return (Bitmap) method.invoke(tuner, localId);
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            Log.e(TAG, "Not able to get metadata image with the tuner.");
+            return null;
+        }
     }
 }
