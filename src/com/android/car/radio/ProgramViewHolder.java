@@ -98,7 +98,7 @@ public class ProgramViewHolder extends RecyclerView.ViewHolder implements View.O
 
     @Override
     public void onClick(View view) {
-        mPresetClickListener.onPresetClicked(getAdapterPosition());
+        mPresetClickListener.onPresetClicked(getLayoutPosition());
     }
 
     /**
@@ -129,7 +129,7 @@ public class ProgramViewHolder extends RecyclerView.ViewHolder implements View.O
             // If there is no metadata text, then use text to indicate the favorite number to the
             // user so that list does not appear empty.
             mPresetItemMetadata.setText(mContext.getString(
-                    R.string.radio_default_favorite_metadata_text, getAdapterPosition() + 1));
+                    R.string.radio_default_favorite_metadata_text, getLayoutPosition() + 1));
         } else {
             mPresetItemMetadata.setText(programName);
         }
@@ -138,7 +138,7 @@ public class ProgramViewHolder extends RecyclerView.ViewHolder implements View.O
             boolean favoriteToggleOn =
                     ((Integer) mPresetButton.getTag() == R.drawable.ic_star_empty);
             setFavoriteButtonFilled(favoriteToggleOn);
-            mPresetFavoriteListener.onPresetFavoriteChanged(getAdapterPosition(), favoriteToggleOn);
+            mPresetFavoriteListener.onPresetFavoriteChanged(getLayoutPosition(), favoriteToggleOn);
         });
     }
 

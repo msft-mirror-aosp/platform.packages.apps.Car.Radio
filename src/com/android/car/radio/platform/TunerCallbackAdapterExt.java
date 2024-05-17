@@ -23,10 +23,10 @@ import android.hardware.radio.RadioTuner;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.GuardedBy;
 import androidx.annotation.Nullable;
 
 import com.android.car.radio.util.Log;
-import com.android.internal.annotations.GuardedBy;
 
 import java.util.Map;
 import java.util.Objects;
