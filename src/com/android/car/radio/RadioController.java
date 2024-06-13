@@ -19,7 +19,7 @@ package com.android.car.radio;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioMetadata;
-import android.media.session.PlaybackState;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -142,6 +142,13 @@ public class RadioController {
     }
 
     /**
+     * Seeks the radio tuner in the given direction, @see RadioAppServiceWrapper#seek(boolean).
+     */
+    public void seek(boolean forward) {
+        mAppService.seek(forward);
+    }
+
+    /**
      * Switch radio band. Currently, this only supports FM and AM bands.
      *
      * @param pt {@link ProgramType} to switch to.
@@ -205,13 +212,13 @@ public class RadioController {
         mAppService.skip(true);
     }
 
-    private void onSwitchToPlayState(@PlaybackState.State int newPlayState) {
+    private void onSwitchToPlayState(@PlaybackStateCompat.State int newPlayState) {
         switch (newPlayState) {
-            case PlaybackState.STATE_PLAYING:
+            case PlaybackStateCompat.STATE_PLAYING:
                 mAppService.setMuted(false);
                 break;
-            case PlaybackState.STATE_PAUSED:
-            case PlaybackState.STATE_STOPPED:
+            case PlaybackStateCompat.STATE_PAUSED:
+            case PlaybackStateCompat.STATE_STOPPED:
                 mAppService.setMuted(true);
                 break;
             default:
