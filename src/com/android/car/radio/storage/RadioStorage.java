@@ -21,7 +21,6 @@ import android.content.SharedPreferences;
 import android.hardware.radio.ProgramSelector;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.util.ArrayMap;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
@@ -35,7 +34,6 @@ import com.android.car.radio.bands.ProgramType;
 import com.android.car.radio.util.Log;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -53,7 +51,7 @@ public class RadioStorage {
     private static final Object sLock = new Object();
 
     @GuardedBy("sLock")
-    private static Map<Integer, RadioStorage> sInstances = new ArrayMap<>();
+    private static RadioStorage sInstance;
 
     private final SharedPreferences mPrefs;
     private final RadioDatabase mDatabase;
@@ -67,20 +65,18 @@ public class RadioStorage {
     }
 
     /**
-     * Returns singleton instance of {@link RadioStorage} for the user in context.
+     * Returns singleton instance of {@link RadioStorage}.
      *
      * @param context Application context
      */
     @NonNull
     public static RadioStorage getInstance(Context context) {
-        int userId = context.getUserId();
         synchronized (sLock) {
-            if (sInstances.containsKey(userId)) {
-                return sInstances.get(userId);
+            if (sInstance != null) {
+                return sInstance;
             }
-            RadioStorage newInstance = new RadioStorage(context.getApplicationContext());
-            sInstances.put(userId, newInstance);
-            return newInstance;
+            sInstance = new RadioStorage(context.getApplicationContext());
+            return sInstance;
         }
     }
 

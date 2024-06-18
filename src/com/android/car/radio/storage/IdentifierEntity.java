@@ -17,7 +17,6 @@
 package com.android.car.radio.storage;
 
 import android.hardware.radio.ProgramSelector;
-import android.hardware.radio.ProgramSelector.IdentifierType;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,12 +24,11 @@ import androidx.room.Entity;
 
 @Entity
 class IdentifierEntity {
-    @IdentifierType
     public final int type;
 
     public final long value;
 
-    IdentifierEntity(@IdentifierType int type, long value) {
+    IdentifierEntity(int type, long value) {
         this.type = type;
         this.value = value;
     }
