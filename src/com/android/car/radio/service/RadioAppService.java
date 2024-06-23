@@ -25,14 +25,14 @@ import android.hardware.radio.ProgramList;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioTuner;
-import android.media.browse.MediaBrowser.MediaItem;
-import android.media.session.PlaybackState;
+import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.service.media.MediaBrowserService;
-import android.util.IndentingPrintWriter;
+import android.support.v4.media.MediaBrowserCompat.MediaItem;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
@@ -41,6 +41,7 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 import androidx.lifecycle.LiveData;
+import androidx.media.MediaBrowserServiceCompat;
 
 import com.android.car.broadcastradio.support.Program;
 import com.android.car.broadcastradio.support.media.BrowseTree;
@@ -54,6 +55,7 @@ import com.android.car.radio.platform.RadioManagerExt;
 import com.android.car.radio.platform.RadioTunerExt;
 import com.android.car.radio.platform.RadioTunerExt.TuneCallback;
 import com.android.car.radio.storage.RadioStorage;
+import com.android.car.radio.util.IndentingPrintWriter;
 import com.android.car.radio.util.Log;
 
 import java.io.FileDescriptor;
@@ -66,7 +68,7 @@ import java.util.Objects;
 /**
  * A service handling hardware tuner session and audio streaming.
  */
-public class RadioAppService extends MediaBrowserService implements LifecycleOwner {
+public class RadioAppService extends MediaBrowserServiceCompat implements LifecycleOwner {
     private static final String TAG = "BcRadioApp.service";
 
     public static String ACTION_APP_SERVICE = "com.android.car.radio.ACTION_APP_SERVICE";
@@ -97,7 +99,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
     @GuardedBy("mLock")
     private ProgramInfo mCurrentProgram = null;
     @GuardedBy("mLock")
-    private int mCurrentPlaybackState = PlaybackState.STATE_NONE;
+    private int mCurrentPlaybackState = PlaybackStateCompat.STATE_NONE;
     @GuardedBy("mLock")
     private long mLastProgramListPush;
     @GuardedBy("mLock")
@@ -113,7 +115,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
 
         Log.i(TAG, "Starting RadioAppService...");
 
-        mWrapper = new RadioAppServiceWrapper(mBinder);
+        mWrapper = new RadioAppServiceWrapper(mLocalService);
         mRadioManager = new RadioManagerExt(this);
         mRadioStorage = RadioStorage.getInstance(this);
         mImageCache = new ImageMemoryCache(mRadioManager, 1000);
@@ -131,7 +133,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
         mBrowseTree.setAmFmRegionConfig(mRadioManager.getAmFmRegionConfig());
         LiveData<List<Program>> favorites = mRadioStorage.getFavorites();
         SkipMode skipMode = mRadioStorage.getSkipMode();
-        mSkipController = new SkipController(mBinder, favorites, skipMode);
+        mSkipController = new SkipController(mLocalService, favorites, skipMode);
         favorites.observe(this, favs -> mBrowseTree.setFavorites(new HashSet<>(favs)));
 
         mProgramList = mRadioTuner.getDynamicProgramList(null);
@@ -170,7 +172,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
         mLifecycleRegistry.markState(Lifecycle.State.STARTED);
         if (mRadioTuner == null) return null;
         if (ACTION_APP_SERVICE.equals(intent.getAction())) {
-            return mBinder;
+            return mLocalBinder;
         }
         return super.onBind(intent);
     }
@@ -264,7 +266,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
 
             if (pt == null) pt = ProgramType.FM;
             Log.i(TAG, "No recently selected program set, selecting default channel for " + pt);
-            pt.tuneToDefault(mRadioTuner, mWrapper.getRegionConfig(), tuneCb);
+            pt.tuneToDefault(mRadioTuner, mLocalService.getRegionConfig(), tuneCb);
         }
     }
 
@@ -333,7 +335,15 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
         }
     }
 
-    private final IRadioAppService.Stub mBinder = new IRadioAppService.Stub() {
+    private final IBinder mLocalBinder = new LocalBinder();
+
+    public class LocalBinder extends Binder {
+        IRadioAppService getLocalService() {
+            return mLocalService;
+        }
+    }
+
+    private final IRadioAppService mLocalService = new IRadioAppService() {
         @Override
         public void addCallback(IRadioAppCallback callback) throws RemoteException {
             synchronized (mLock) {
@@ -383,7 +393,6 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
         @Override
         public void skip(boolean forward, ITuneCallback callback) throws RemoteException {
             Objects.requireNonNull(callback);
-
             mSkipController.skip(forward, callback);
         }
 
@@ -427,7 +436,7 @@ public class RadioAppService extends MediaBrowserService implements LifecycleOwn
                     throw new IllegalStateException("Tuner session is closed");
                 }
 
-                if (mCurrentPlaybackState != PlaybackState.STATE_NONE) {
+                if (mCurrentPlaybackState != PlaybackStateCompat.STATE_NONE) {
                     return;
                 }
             }

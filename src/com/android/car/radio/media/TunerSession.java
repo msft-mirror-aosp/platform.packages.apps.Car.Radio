@@ -20,13 +20,14 @@ import android.content.Context;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.hardware.radio.RadioMetadata;
-import android.media.MediaMetadata;
 import android.media.Rating;
-import android.media.session.MediaController;
-import android.media.session.MediaSession;
-import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.RatingCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -51,7 +52,7 @@ public class TunerSession {
     private static final String TAG = "BcRadioApp.media";
 
     private final Object mLock = new Object();
-    private final MediaSession mSession;
+    private final MediaSessionCompat mSession;
 
     private final Context mContext;
     private final BrowseTree mBrowseTree;
@@ -60,8 +61,8 @@ public class TunerSession {
 
     private final RadioStorage mRadioStorage;
 
-    private final PlaybackState.Builder mPlaybackStateBuilder =
-            new PlaybackState.Builder();
+    private final PlaybackStateCompat.Builder mPlaybackStateBuilder =
+            new PlaybackStateCompat.Builder();
     @Nullable private ProgramInfo mCurrentProgram;
 
     /**
@@ -80,7 +81,7 @@ public class TunerSession {
 
     public TunerSession(@NonNull Context context, @NonNull BrowseTree browseTree,
             @NonNull RadioAppServiceWrapper appService, @Nullable ImageResolver imageResolver) {
-        mSession = new MediaSession(context, TAG);
+        mSession = new MediaSessionCompat(context, TAG);
 
         mContext = Objects.requireNonNull(context);
         mBrowseTree = Objects.requireNonNull(browseTree);
@@ -91,15 +92,15 @@ public class TunerSession {
 
         // ACTION_PAUSE is reserved for time-shifted playback
         mPlaybackStateBuilder.setActions(
-                PlaybackState.ACTION_STOP
-                | PlaybackState.ACTION_PLAY
-                | PlaybackState.ACTION_SKIP_TO_PREVIOUS
-                | PlaybackState.ACTION_SKIP_TO_NEXT
-                | PlaybackState.ACTION_SET_RATING
-                | PlaybackState.ACTION_PLAY_FROM_MEDIA_ID
-                | PlaybackState.ACTION_PLAY_FROM_URI);
+                PlaybackStateCompat.ACTION_STOP
+                | PlaybackStateCompat.ACTION_PLAY
+                | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+                | PlaybackStateCompat.ACTION_SET_RATING
+                | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID
+                | PlaybackStateCompat.ACTION_PLAY_FROM_URI);
         mSession.setRatingType(Rating.RATING_HEART);
-        onPlaybackStateChanged(PlaybackState.STATE_NONE);
+        onPlaybackStateChanged(PlaybackStateCompat.STATE_NONE);
         mSession.setCallback(new TunerSessionCallback());
 
         // TunerSession is a part of RadioAppService, so observeForever is fine here.
@@ -123,8 +124,8 @@ public class TunerSession {
         synchronized (mLock) {
             if (info == null) return;
             boolean fav = mRadioStorage.isFavorite(info.getSelector());
-            MediaMetadata currMetaData = mSession.getController().getMetadata();
-            MediaMetadata newMetaData = ProgramInfoExt.toMediaDisplayMetadata(info, fav,
+            MediaMetadataCompat currMetaData = mSession.getController().getMetadata();
+            MediaMetadataCompat newMetaData = ProgramInfoExt.toMediaDisplayMetadata(info, fav,
                     mImageResolver, PROGRAM_NAME_ORDER);
             if (!Objects.equals(currMetaData, newMetaData)) {
                 mSession.setMetadata(newMetaData);
@@ -132,10 +133,10 @@ public class TunerSession {
         }
     }
 
-    private void onPlaybackStateChanged(@PlaybackState.State int state) {
+    private void onPlaybackStateChanged(@PlaybackStateCompat.State int state) {
         synchronized (mPlaybackStateBuilder) {
             mPlaybackStateBuilder.setState(state,
-                    PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1.0f);
+                    PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
             mSession.setPlaybackState(mPlaybackStateBuilder.build());
         }
     }
@@ -143,26 +144,26 @@ public class TunerSession {
     private void selectionError() {
         mAppService.setMuted(true);
         mPlaybackStateBuilder.setErrorMessage(mContext.getString(R.string.invalid_selection));
-        onPlaybackStateChanged(PlaybackState.STATE_ERROR);
+        onPlaybackStateChanged(PlaybackStateCompat.STATE_ERROR);
         mPlaybackStateBuilder.setErrorMessage(null);
     }
 
-    /** See {@link MediaSession#getSessionToken}. */
-    public MediaSession.Token getSessionToken() {
+    /** See {@link MediaSessionCompat#getSessionToken}. */
+    public MediaSessionCompat.Token getSessionToken() {
         return mSession.getSessionToken();
     }
 
-    /** See {@link MediaSession#getController}. */
-    public MediaController getController() {
+    /** See {@link MediaSessionCompat#getController}. */
+    public MediaControllerCompat getController() {
         return mSession.getController();
     }
 
-    /** See {@link MediaSession#release}. */
+    /** See {@link MediaSessionCompat#release}. */
     public void release() {
         mSession.release();
     }
 
-    private class TunerSessionCallback extends MediaSession.Callback {
+    private class TunerSessionCallback extends MediaSessionCompat.Callback {
         @Override
         public void onStop() {
             mAppService.setMuted(true);
@@ -185,7 +186,7 @@ public class TunerSession {
         }
 
         @Override
-        public void onSetRating(Rating rating) {
+        public void onSetRating(RatingCompat rating) {
             synchronized (mLock) {
                 ProgramInfo info = mAppService.getCurrentProgram().getValue();
                 if (info == null) return;
