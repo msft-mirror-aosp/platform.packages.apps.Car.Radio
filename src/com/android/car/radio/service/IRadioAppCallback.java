@@ -18,10 +18,12 @@ package com.android.car.radio.service;
 
 import android.hardware.radio.RadioManager;
 
+import java.util.List;
+
 /**
  * Watches current program changes.
  */
-oneway interface IRadioAppCallback {
+interface IRadioAppCallback {
     /**
      * Called when hardware error has occured.
      *
@@ -36,7 +38,7 @@ oneway interface IRadioAppCallback {
      *
      * @param info Current program info
      */
-    void onCurrentProgramChanged(in RadioManager.ProgramInfo info);
+    void onCurrentProgramChanged(RadioManager.ProgramInfo info);
 
     /**
      * Called when playback state (play/pause) changes.
@@ -48,7 +50,7 @@ oneway interface IRadioAppCallback {
     /**
      * Called when program list changes.
      *
-     * @param New program list
+     * @param plist New program list
      */
-    void onProgramListChanged(in List<RadioManager.ProgramInfo> plist);
+    void onProgramListChanged(List<RadioManager.ProgramInfo> plist);
 }

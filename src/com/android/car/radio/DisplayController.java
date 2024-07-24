@@ -19,7 +19,7 @@ package com.android.car.radio;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.hardware.radio.ProgramSelector;
-import android.media.session.PlaybackState;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
@@ -221,10 +221,9 @@ public class DisplayController {
             // it's a different band - don't animate
             mChannel.setText(ProgramSelectorExt.getDisplayName(sel, 0));
         } else {
-            int fromFreq = (int) mDisplayedChannel
-                    .getFirstId(ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY);
-            int toFreq = (int) sel.getFirstId(ProgramSelector.IDENTIFIER_TYPE_AMFM_FREQUENCY);
-            mChannelAnimator.setIntValues((int) fromFreq, (int) toFreq);
+            int fromFreq = (int) ProgramSelectorExt.getFrequency(mDisplayedChannel);
+            int toFreq = (int) ProgramSelectorExt.getFrequency(sel);
+            mChannelAnimator.setIntValues(fromFreq, toFreq);
             mChannelAnimator.setDuration(CHANNEL_CHANGE_DURATION_MS);
             mChannelAnimator.addUpdateListener(animation -> mChannel.setText(
                     ProgramSelectorExt.formatAmFmFrequency((int) animation.getAnimatedValue(), 0)));
@@ -283,7 +282,7 @@ public class DisplayController {
         mStationName.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
     }
 
-    private void onPlaybackStateChanged(@PlaybackState.State int state) {
+    private void onPlaybackStateChanged(@PlaybackStateCompat.State int state) {
         if (mPlayButton != null) {
             mPlayButton.setPlayState(state);
             mPlayButton.refreshDrawableState();
