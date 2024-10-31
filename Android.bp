@@ -31,13 +31,13 @@ android_app {
 
     required: ["allowed_privapp_com.android.car.radio"],
 
-    certificate: "platform",
+    certificate: ":com-android-car-apps-test",
 
     privileged: true,
 
     libs: ["android.car-system-stubs"],
     min_sdk_version: "33",
-    target_sdk_version: "35",
+    target_sdk_version: "34",
     sdk_version: "system_current",
 
     static_libs: [
