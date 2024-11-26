@@ -41,7 +41,6 @@ android_app {
     sdk_version: "system_current",
 
     static_libs: [
-        "androidx.asynclayoutinflater_asynclayoutinflater",
         "androidx.lifecycle_lifecycle-livedata",
         "androidx-constraintlayout_constraintlayout",
         "androidx.recyclerview_recyclerview",
