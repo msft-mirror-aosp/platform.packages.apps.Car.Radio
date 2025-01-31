@@ -127,7 +127,7 @@ public class TunerSession {
             MediaMetadataCompat currMetaData = mSession.getController().getMetadata();
             MediaMetadataCompat newMetaData = ProgramInfoExt.toMediaDisplayMetadata(info, fav,
                     mImageResolver, PROGRAM_NAME_ORDER);
-            if (!Objects.equals(currMetaData, newMetaData)) {
+            if (!ProgramInfoExt.containsSameRadioMetadata(currMetaData, newMetaData)) {
                 mSession.setMetadata(newMetaData);
             }
         }
