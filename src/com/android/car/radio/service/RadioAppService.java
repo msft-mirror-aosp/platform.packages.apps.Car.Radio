@@ -84,7 +84,7 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
     private final List<IRadioAppCallback> mRadioAppCallbacks = new ArrayList<>();
     private RadioAppServiceWrapper mWrapper;
 
-    private RadioManagerExt mRadioManager;
+    @Nullable private RadioManagerExt mRadioManager;
     @Nullable private RadioTunerExt mRadioTuner;
     @Nullable private ProgramList mProgramList;
 
@@ -116,7 +116,12 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
         Log.i(TAG, "Starting RadioAppService...");
 
         mWrapper = new RadioAppServiceWrapper(mLocalService);
-        mRadioManager = new RadioManagerExt(this);
+        try {
+            mRadioManager = new RadioManagerExt(this);
+        } catch (NullPointerException e) {
+            Log.e(TAG, "Radio is unsupported", e);
+            return;
+        }
         mRadioStorage = RadioStorage.getInstance(this);
         mImageCache = new ImageMemoryCache(mRadioManager, 1000);
         mRadioTuner = mRadioManager.openSession(mHardwareCallback, null);
@@ -457,6 +462,9 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
         @Override
         public RegionConfig getRegionConfig() {
             synchronized (mLock) {
+                if (mRadioManager == null) {
+                    throw new UnsupportedOperationException("Radio is unsupported");
+                }
                 if (mRegionConfigCache == null) {
                     mRegionConfigCache = new RegionConfig(mRadioManager.getAmFmRegionConfig());
                 }
