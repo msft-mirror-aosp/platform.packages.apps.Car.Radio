@@ -26,7 +26,7 @@ limitations under the License.
     android:background="@drawable/playback_background">
 
     <ImageView
-        android:id="@+id/station_art"
+        android:id="@+id/station_icon"
         android:layout_width="@dimen/playback_card_art_size"
         android:layout_height="@dimen/playback_card_art_size"
         app:layout_constraintStart_toStartOf="parent"

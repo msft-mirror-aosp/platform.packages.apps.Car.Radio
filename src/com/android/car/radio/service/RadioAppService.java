@@ -21,6 +21,7 @@ import static com.android.car.radio.util.Remote.tryExec;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.hardware.radio.ProgramList;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
@@ -462,6 +463,12 @@ public class RadioAppService extends MediaBrowserServiceCompat implements Lifecy
                 }
                 return mRegionConfigCache;
             }
+        }
+
+        @Override
+        @Nullable
+        public Bitmap getImage(long id) {
+            return mImageCache.resolve(id);
         }
     };
 
