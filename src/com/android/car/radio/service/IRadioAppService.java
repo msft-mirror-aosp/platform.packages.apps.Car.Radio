@@ -16,8 +16,11 @@
 
 package com.android.car.radio.service;
 
+import android.graphics.Bitmap;
 import android.hardware.radio.ProgramSelector;
 import android.os.RemoteException;
+
+import androidx.annotation.Nullable;
 
 import com.android.car.radio.bands.ProgramType;
 import com.android.car.radio.bands.RegionConfig;
@@ -97,4 +100,10 @@ interface IRadioAppService {
      * Tunes to the previously selected program or the default channel.
      */
     void tuneToDefaultIfNeeded();
+
+    /**
+     * Returns bitmap associated with an id
+     */
+    @Nullable
+    Bitmap getImage(long id);
 }

@@ -197,6 +197,10 @@ public class RadioController {
                 mDisplayController.setDetails(ProgramInfoExt.getProgramName(info, /* flags= */ 0,
                         TunerSession.PROGRAM_NAME_ORDER));
             }
+            if (meta.containsKey(RadioMetadata.METADATA_KEY_ICON)) {
+                mDisplayController.setStationIcon(mAppService.getImage(meta.getInt(
+                        RadioMetadata.METADATA_KEY_ICON)));
+            }
 
             mDisplayController.setCurrentIsFavorite(mRadioStorage.isFavorite(sel));
         }
