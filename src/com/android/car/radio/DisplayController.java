@@ -255,10 +255,8 @@ public class DisplayController {
      */
     public void setDetails(@Nullable String songTitle, @Nullable String songArtist) {
         if (mDetails == null) return;
-        songTitle = songTitle.trim();
-        songArtist = songArtist.trim();
-        if (TextUtils.isEmpty(songTitle)) songTitle = null;
-        if (TextUtils.isEmpty(songArtist)) songArtist = null;
+        songTitle = trimAndNullIfEmpty(songTitle);
+        songArtist = trimAndNullIfEmpty(songArtist);
 
         String details;
         if (songTitle == null && songArtist == null) {
@@ -272,6 +270,17 @@ public class DisplayController {
         }
 
         setDetails(details);
+    }
+
+    private static String trimAndNullIfEmpty(@Nullable String str) {
+        if (str == null) {
+            return null;
+        }
+        str = str.trim();
+        if (TextUtils.isEmpty(str)) {
+            str = null;
+        }
+        return str;
     }
 
     /**
