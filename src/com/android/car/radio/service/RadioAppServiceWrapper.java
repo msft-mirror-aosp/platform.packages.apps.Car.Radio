@@ -20,6 +20,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
 import android.hardware.radio.ProgramSelector;
 import android.hardware.radio.RadioManager.ProgramInfo;
 import android.os.IBinder;
@@ -397,5 +398,13 @@ public class RadioAppServiceWrapper {
     @NonNull
     public RegionConfig getRegionConfig() {
         return Objects.requireNonNull(queryService(service -> service.getRegionConfig(), null));
+    }
+
+    /**
+     * Returns bitmap associated with an id
+     */
+    @Nullable
+    public Bitmap getImage(long id) {
+        return queryService(service -> service.getImage(id), null);
     }
 }
