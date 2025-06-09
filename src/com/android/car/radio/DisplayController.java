@@ -18,6 +18,7 @@ package com.android.car.radio;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.hardware.radio.ProgramSelector;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
@@ -55,6 +56,7 @@ public class DisplayController {
     private final TextView mChannel;
     private final TextView mDetails;
     private final TextView mStationName;
+    private final ImageView mStationIcon;
 
     private final ImageView mBackwardSeekButton;
     private final ImageView mForwardSeekButton;
@@ -89,6 +91,7 @@ public class DisplayController {
         mChannel = activity.findViewById(R.id.station_channel);
         mDetails = activity.findViewById(R.id.station_details);
         mStationName = activity.findViewById(R.id.station_name);
+        mStationIcon = activity.findViewById(R.id.station_icon);
         mBackwardSeekButton = activity.findViewById(R.id.back_button);
         mForwardSeekButton = activity.findViewById(R.id.forward_button);
         mPlayButton = activity.findViewById(R.id.play_button);
@@ -252,10 +255,8 @@ public class DisplayController {
      */
     public void setDetails(@Nullable String songTitle, @Nullable String songArtist) {
         if (mDetails == null) return;
-        songTitle = songTitle.trim();
-        songArtist = songArtist.trim();
-        if (TextUtils.isEmpty(songTitle)) songTitle = null;
-        if (TextUtils.isEmpty(songArtist)) songArtist = null;
+        songTitle = trimAndNullIfEmpty(songTitle);
+        songArtist = trimAndNullIfEmpty(songArtist);
 
         String details;
         if (songTitle == null && songArtist == null) {
@@ -271,6 +272,17 @@ public class DisplayController {
         setDetails(details);
     }
 
+    private static String trimAndNullIfEmpty(@Nullable String str) {
+        if (str == null) {
+            return null;
+        }
+        str = str.trim();
+        if (TextUtils.isEmpty(str)) {
+            str = null;
+        }
+        return str;
+    }
+
     /**
      * Sets the artist(s) of the currently playing song or current radio station information
      * (e.g. KOIT).
@@ -282,6 +294,17 @@ public class DisplayController {
         mStationName.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
     }
 
+    /**
+     * Sets the icon of the radio station.
+     */
+    public void setStationIcon(@Nullable Bitmap stationIcon) {
+        if (mStationIcon == null) {
+            mStationIcon.setImageResource(R.drawable.radio_placeholder);
+            return;
+        }
+        mStationIcon.setImageBitmap(stationIcon);
+    }
+
     private void onPlaybackStateChanged(@PlaybackStateCompat.State int state) {
         if (mPlayButton != null) {
             mPlayButton.setPlayState(state);
@@ -291,7 +314,7 @@ public class DisplayController {
 
     /**
      * Sets whether or not the current program is stored as a favorite. If it is, then the
-     * icon will be updatd to reflect this state.
+     * icon will be updated to reflect this state.
      */
     public void setCurrentIsFavorite(boolean isFavorite) {
         mIsFavorite = isFavorite;

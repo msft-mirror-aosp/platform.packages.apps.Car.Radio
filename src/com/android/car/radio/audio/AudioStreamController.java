@@ -257,17 +257,17 @@ public class AudioStreamController {
                 case AudioManager.AUDIOFOCUS_GAIN:
                     mHasSomeFocus = true;
                     // we assume that audio focus was requested only when we mean to unmute
-                    unmuteLocked();
+                    if (unmuteLocked()) {
+                        notifyPlaybackStateLocked(PlaybackStateCompat.STATE_PLAYING);
+                    }
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS:
                     Log.i(TAG, "Unexpected audio focus loss");
                     mHasSomeFocus = false;
-                    mRadioTunerExt.setMuted(true);
-                    notifyPlaybackStateLocked(PlaybackStateCompat.STATE_STOPPED);
-                    break;
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                 case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                     mRadioTunerExt.setMuted(true);
+                    notifyPlaybackStateLocked(PlaybackStateCompat.STATE_STOPPED);
                     break;
                 default:
                     Log.w(TAG, "Unexpected audio focus state: " + focusChange);
