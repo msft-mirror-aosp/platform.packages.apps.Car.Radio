@@ -46,7 +46,7 @@ limitations under the License.
         android:maxLines="@integer/playback_card_station_name_max_lines"
         android:textAppearance="?android:attr/textAppearanceLarge"
         app:layout_constraintVertical_chainStyle="packed"
-        app:layout_constraintStart_toEndOf="@+id/station_art"
+        app:layout_constraintStart_toEndOf="@+id/station_icon"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/station_details"
         app:layout_constraintEnd_toStartOf="@+id/station_channel"
@@ -65,7 +65,7 @@ limitations under the License.
         android:textAppearance="?android:attr/textAppearanceMedium"
         app:layout_constraintTop_toBottomOf="@+id/station_name"
         app:layout_constraintBottom_toTopOf="@+id/playback_controls"
-        app:layout_constraintStart_toEndOf="@+id/station_art"
+        app:layout_constraintStart_toEndOf="@+id/station_icon"
         app:layout_constraintEnd_toStartOf="@+id/station_channel"
         android:visibility="invisible" />
 
