@@ -122,11 +122,6 @@ public class DisplayController {
 
         boolean enabled = (state == RadioAppServiceWrapper.STATE_CONNECTED);
 
-        // Color the buttons so that they are grey in appearance if they are disabled.
-        int tint = enabled
-                ? mContext.getColor(R.color.control_button_color)
-                : mContext.getColor(R.color.control_button_disabled_color);
-
         if (mPlayButton != null) {
             // No need to tint the play button because its drawable already contains a disabled
             // state.
@@ -135,11 +130,13 @@ public class DisplayController {
 
         if (mForwardSeekButton != null) {
             mForwardSeekButton.setEnabled(enabled);
-            mForwardSeekButton.setColorFilter(tint);
+            mForwardSeekButton.setImageTintList(
+                    mContext.getColorStateList(R.color.control_button_color));
         }
         if (mBackwardSeekButton != null) {
             mBackwardSeekButton.setEnabled(enabled);
-            mBackwardSeekButton.setColorFilter(tint);
+            mBackwardSeekButton.setImageTintList(
+                    mContext.getColorStateList(R.color.control_button_color));
         }
 
         if (mFavoriteButton != null) {
