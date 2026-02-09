@@ -19,6 +19,7 @@ package com.android.car.radio;
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.radio.ProgramSelector;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -117,9 +118,9 @@ public class ProgramViewHolder extends RecyclerView.ViewHolder implements View.O
         mPresetItemChannel.setText(ProgramSelectorExt.getDisplayName(
                 sel, ProgramSelectorExt.NAME_NO_MODULATION));
 
-        mPresetItemChannelBg.setColor(mContext.getResources().getColor(isActiveStation
-                ? R.color.accent_color
-                : R.color.radio_card_color, null));
+        mPresetItemChannelBg.setColor(isActiveStation
+                ? getAttrColor(R.attr.oemColorPrimary)
+                : mContext.getColor(R.color.radio_card_color));
         mPresetItemChannel.setCompoundDrawablesRelativeWithIntrinsicBounds(isActiveStation
                 ? R.drawable.ic_equalizer
                 : 0, 0, 0, 0);
@@ -149,8 +150,14 @@ public class ProgramViewHolder extends RecyclerView.ViewHolder implements View.O
         mPresetButton.setTag(favoriteToggleOn
                 ? R.drawable.ic_star_filled
                 : R.drawable.ic_star_empty);
-        mPresetButton.setColorFilter(mContext.getColor(favoriteToggleOn
-                ? R.color.accent_color
-                : R.color.control_button_color));
+        mPresetButton.setColorFilter(favoriteToggleOn
+                ? getAttrColor(R.attr.oemColorPrimary)
+                : mContext.getColor(R.color.control_button_color));
+    }
+
+    private int getAttrColor(int attrId) {
+        TypedValue typedValue = new TypedValue();
+        mContext.getTheme().resolveAttribute(attrId, typedValue, true);
+        return typedValue.data;
     }
 }

@@ -84,4 +84,7 @@ dependencies {
     implementation libs.androidx.room.runtime
     annotationProcessor libs.androidx.room.compiler
 
+    implementation project(':oem-token-lib')
 }
+
+android.aaptOptions.additionalParameters "-I", "${projectDir}/../libs/car-ui-lib/oem-tokens/shared-lib/prebuilt/token-shared-lib.apk"
