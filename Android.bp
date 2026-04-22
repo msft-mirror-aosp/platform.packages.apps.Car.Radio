@@ -35,7 +35,10 @@ android_app {
 
     privileged: true,
 
-    libs: ["android.car-system-stubs"],
+    libs: [
+        "android.car-system-stubs",
+        "token-shared-lib",
+    ],
     min_sdk_version: "33",
     target_sdk_version: "34",
     sdk_version: "system_current",
@@ -52,6 +55,7 @@ android_app {
         "car-media-common-prebuilt",
         "car-broadcastradio-support-prebuilt",
         "car-ui-lib-prebuilt",
+        "oem-token-lib",
     ],
 
     plugins: ["androidx.room_room-compiler-plugin"],

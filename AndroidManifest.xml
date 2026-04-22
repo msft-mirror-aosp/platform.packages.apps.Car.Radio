@@ -40,11 +40,13 @@
         android:theme="@style/Theme.Radio"
         android:supportsRtl="true">
 
+        <uses-library android:name="com.android.oem.tokens" android:required="false" />
+
         <activity
             android:name=".RadioActivity"
             android:resizeableActivity="true"
             android:configChanges="uiMode"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:exported="true">
             <meta-data android:name="distractionOptimized" android:value="true"/>
             <intent-filter>
